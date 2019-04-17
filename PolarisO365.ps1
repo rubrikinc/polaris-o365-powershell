@@ -142,6 +142,47 @@ function Get-PolarisSLA() {
 }
 
 function Get-PolarisO365Subscriptions {
+    <#
+    .SYNOPSIS
+
+    Returns all O365 subscriptions from a given Polaris instance.
+
+    .DESCRIPTION
+
+    Returns an array of Office 365 subscriptions from a given Polaris instance, taking 
+    an API token, and Polaris URL.
+
+    .PARAMETER Token
+    Polaris API Token.
+
+    .PARAMETER PolarisURL
+    The URL for the Polaris instance in the form 'https://myurl'
+
+    .INPUTS
+
+    None. You cannot pipe objects to Get-PolarisO365Subscriptions.
+
+    .OUTPUTS
+
+    System.Object. Get-PolarisO365Subscriptions returns an array containing the ID, Name, 
+    status, count of users, count of unprotected users, and SLA details for the
+    returned O365 Subscriptions.
+
+    .EXAMPLE
+
+    PS> Get-PolarisO365Subscriptions -Token $token -PolarisURL $url
+
+    name                    : MyO365Subscription
+    id                      : 12345678-1234-1234-abcd-123456789012
+    status                  : ACTIVE
+    usersCount              : 15468
+    unprotectedUsersCount   : 1018
+    effectiveSlaDomainName  : UNPROTECTED
+    configuredSlaDomainName : UNPROTECTED
+    effectiveSlaDomainId    : UNPROTECTED
+    configuredSlaDomainId   : UNPROTECTED
+    #>
+
     param(
         [Parameter(Mandatory=$True)]
         [String]$Token,
@@ -238,6 +279,46 @@ function Get-PolarisO365Subscriptions {
 }
 
 function Get-PolarisO365Users() {
+    <#
+    .SYNOPSIS
+
+    Returns all O365 users for a given subscription in a given Polaris instance.
+
+    .DESCRIPTION
+
+    Returns an array of Office 365 users from a given subscription and Polaris instance, taking 
+    an API token, Polaris URL, and subscription ID.
+
+    .PARAMETER Token
+    Polaris API Token.
+
+    .PARAMETER PolarisURL
+    The URL for the Polaris instance in the form 'https://myurl'
+
+    .PARAMETER SubscriptionID
+    The Polaris subscription ID for a given O365 subscription. Can be obtained with the 
+    'Get-PolarisO365Subscriptions' command.
+
+    .INPUTS
+
+    None. You cannot pipe objects to Get-PolarisO365Users.
+
+    .OUTPUTS
+
+    System.Object. Get-PolarisO365Users returns an array containing the ID, Name, 
+    email address, and SLA details for the returned O365 users.
+
+    .EXAMPLE
+
+    PS> Get-PolarisO365Users -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+
+    name                   : Milan Kundera
+    id                     : 12341234-1234-1234-abcd-123456789012
+    emailAddress           : milan.kundera@mydomain.onmicrosoft.com
+    slaAssignment          : Direct
+    effectiveSlaDomainName : Gold
+    #>
+
     param(
         [Parameter(Mandatory=$True)]
         [String]$Token,
@@ -335,6 +416,49 @@ function Get-PolarisO365Users() {
 }
 
 function Get-PolarisO365User() {
+    <#
+    .SYNOPSIS
+
+    Returns a filtered list of O365 users for a given subscription in a given Polaris instance.
+
+    .DESCRIPTION
+
+    Returns a filtered list of Office 365 users from a given subscription and Polaris instance, taking 
+    an API token, Polaris URL, subscription ID, and search string.
+
+    .PARAMETER Token
+    Polaris API Token.
+
+    .PARAMETER PolarisURL
+    The URL for the Polaris instance in the form 'https://myurl'
+
+    .PARAMETER SubscriptionID
+    The Polaris subscription ID for a given O365 subscription. Can be obtained with the 
+    'Get-PolarisO365Subscriptions' command.
+
+    .PARAMETER SearchString
+    Search string, used to filter user's name or email address.
+
+    .INPUTS
+
+    None. You cannot pipe objects to Get-PolarisO365User.
+
+    .OUTPUTS
+
+    System.Object. Get-PolarisO365User returns an array containing the ID, Name, 
+    email address, and SLA details for the returned O365 users.
+
+    .EXAMPLE
+
+    PS> Get-PolarisO365User -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'Milan'
+
+    name                   : Milan Kundera
+    id                     : 12341234-1234-1234-abcd-123456789012
+    emailAddress           : milan.kundera@mydomain.onmicrosoft.com
+    slaAssignment          : Direct
+    effectiveSlaDomainName : Gold
+    #>
+
     param(
         [Parameter(Mandatory=$True)]
         [String]$Token,
@@ -436,6 +560,44 @@ function Get-PolarisO365User() {
 }
 
 function Set-PolarisO365User() {
+    <#
+    .SYNOPSIS
+
+    Sets the SLA Domain for a selected Office 365 user.
+
+    .DESCRIPTION
+
+    Sets the protection for an O365 mailbox in a given Polaris instance, taking 
+    an API token, Polaris URL, user ID, and SLA ID.
+
+    .PARAMETER Token
+    Polaris API Token.
+
+    .PARAMETER PolarisURL
+    The URL for the Polaris instance in the form 'https://myurl'
+
+    .PARAMETER UserID
+    The user ID for an O365 user. Can be obtained using 'Get-PolarisO365User' or 
+    'Get-PolarisO365Users' commands.
+
+    .PARAMETER SlaID
+    The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command.
+
+    .INPUTS
+
+    None. You cannot pipe objects to Set-PolarisO365User.
+
+    .OUTPUTS
+
+    System.String. This returns the string 'Success' if the modification was successful, or throws an 
+    error if the command is not successful.
+
+    .EXAMPLE
+
+    PS> Set-PolarisO365User -Token $token -PolarisURL $url -UserID $my_user.id -SlaID $my_sla.id
+    Success
+    #>
+
     param(
         [Parameter(Mandatory=$True)]
         [String]$Token,
