@@ -34,3 +34,40 @@ $token = Get-PolarisToken -Username $username -Password $password -PolarisURL $u
 ```
 
 This token can then be used with the other commands in the module.
+
+## Featured Commands
+
+The following commands are available in the module:
+
+* Get-PolarisToken
+* Get-PolarisSLA
+* Get-PolarisO365Subscriptions
+* Get-PolarisO365Users
+* Get-PolarisO365User
+* Set-PolarisO365User
+
+Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
+
+## Example workflow
+
+```powershell
+. .\PolarisO365.ps1 # import the module
+# set variables
+$url = 'https://myinstance.my.rubrik.com'
+$username = 'steve@mydomain.com'
+$password = 'MyPass123!'
+$sub_name = 'mysubscription'
+$sla_name = 'Bronze'
+# get a token
+$token = Get-PolarisToken -Username $username -Password $password -PolarisURL $url
+# get all O365 subscriptions
+$all_subs = Get-PolarisO365Subscriptions -Token $token -PolarisURL $url
+# get just the subscription we want
+$my_sub = $all_subs | ?{$_.name -eq $sub_name}
+# get our SLA domain
+$my_sla = Get-PolarisSLA -Token $token -PolarisURL $url -Name $sla_name
+# get our user
+$my_user = Get-PolarisO365User -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
+# set the SLA domain for our user
+Set-PolarisO365User -Token $token -PolarisURL $url -UserID $my_user.id -SLAID $my_sla.id
+```
