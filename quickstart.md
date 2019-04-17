@@ -1,0 +1,73 @@
+# Rubrik Polaris Office 365 Protection PowerShell Module
+
+## Overview
+
+This repo contains the Rubrik Polaris Office 365 PowerShell Module. This can be imported to a PowerShell session or script using the following command:
+
+```powershell
+. .\PolarisO365.ps1
+```
+
+## Using the module
+
+### Getting a token
+
+An authentication token for the Polaris instance being used will be needed to use the commands. This can be obtained by the following command:
+
+```powershell
+NAME
+    Get-PolarisToken
+
+SYNTAX
+    Get-PolarisToken [-Username] <string> [-Password] <string> [-PolarisURL] <string>  [<CommonParameters>]
+```
+
+This command can be used as follows to store the token as a PowerShell variable:
+
+```powershell
+# declare our variables
+$url = 'https://myinstance.my.rubrik.com'   # this is the URL for your Polaris instance
+$username = 'steve@mydomain.com'            # the username for your Polaris instance
+$password = 'MyPass123!'                    # the password for your Polaris instance
+# store the token
+$token = Get-PolarisToken -Username $username -Password $password -PolarisURL $url
+```
+
+This token can then be used with the other commands in the module.
+
+## Featured Commands
+
+The following commands are available in the module:
+
+* Get-PolarisToken
+* Get-PolarisSLA
+* Get-PolarisO365Subscriptions
+* Get-PolarisO365Users
+* Get-PolarisO365User
+* Set-PolarisO365User
+
+Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
+
+## Example workflow
+
+```powershell
+. .\PolarisO365.ps1 # import the module
+# set variables
+$url = 'https://myinstance.my.rubrik.com'
+$username = 'steve@mydomain.com'
+$password = 'MyPass123!'
+$sub_name = 'mysubscription'
+$sla_name = 'Bronze'
+# get a token
+$token = Get-PolarisToken -Username $username -Password $password -PolarisURL $url
+# get all O365 subscriptions
+$all_subs = Get-PolarisO365Subscriptions -Token $token -PolarisURL $url
+# get just the subscription we want
+$my_sub = $all_subs | ?{$_.name -eq $sub_name}
+# get our SLA domain
+$my_sla = Get-PolarisSLA -Token $token -PolarisURL $url -Name $sla_name
+# get our user
+$my_user = Get-PolarisO365User -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
+# set the SLA domain for our user
+Set-PolarisO365User -Token $token -PolarisURL $url -UserID $my_user.id -SLAID $my_sla.id
+```
