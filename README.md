@@ -2,7 +2,11 @@
 
 ## :hammer: Installation
 
+See [Quick Start Guide](quickstart.md) for installation and usage instructions.
+
 ## :mag: Example
+
+See [Quick Start Guide](quickstart.md) for examples.
 
 ## :blue_book: Documentation
 
