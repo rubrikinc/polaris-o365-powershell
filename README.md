@@ -1,4 +1,4 @@
-# polaris-o365-powershell
+# Rubrik Polaris Office 365 Protection PowerShell Module
 
 ## :hammer: Installation
 
@@ -8,7 +8,7 @@
 
 Here are some resources to get you started! If you find any challenges from this project are not properly documented or are unclear, please raise an issueand let us know! This is a fun, safe environment - don't worry if you're a GitHub newbie! :heart:
 
-* Quick Start Guide
+* [Quick Start Guide](quickstart.md)
 * [Rubrik API Documentation](https://github.com/rubrikinc/api-documentation)
 
 ## :muscle: How You Can Help
