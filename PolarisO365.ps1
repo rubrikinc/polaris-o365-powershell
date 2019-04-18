@@ -577,8 +577,8 @@ function Set-PolarisO365ObjectSla() {
     The URL for the Polaris instance in the form 'https://myurl'
 
     .PARAMETER ObjectID
-    The object ID for an O365 user or subscription. Can be obtained using 'Get-PolarisO365User', 
-    'Get-PolarisO365Users', or 'Get-PolarisO365Subscriptions' commands.
+    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisO365User', 
+    'Get-PolarisO365Users', or 'Get-PolarisO365Subscriptions' commands. This can take an array of object IDs.
 
     .PARAMETER SlaID
     The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command. Use the string 
@@ -616,7 +616,7 @@ function Set-PolarisO365ObjectSla() {
         [Parameter(Mandatory=$True)]
         [String]$PolarisURL,
         [Parameter(Mandatory=$True)]
-        [String]$ObjectID,
+        [String[]]$ObjectID,
         [Parameter(Mandatory=$True)]
         [String]$SlaID
     )
@@ -634,7 +634,7 @@ function Set-PolarisO365ObjectSla() {
         "variables" = @{
             "globalSlaAssignType" = "protectWithSlaId";
             "globalSlaOptionalFid" = $SlaID;
-            "objectIds" = @($ObjectID);
+            "objectIds" = $ObjectID;
         };
         "query" = "mutation AssignSLA(`$globalSlaOptionalFid: UUID, `$globalSlaAssignType: SlaAssignTypeEnum!, `$objectIds: [UUID!]!) {
             assignSla(globalSlaOptionalFid: `$globalSlaOptionalFid, globalSlaAssignType: `$globalSlaAssignType, objectIds: `$objectIds) {
