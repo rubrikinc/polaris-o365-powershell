@@ -563,12 +563,12 @@ function Set-PolarisO365ObjectSla() {
     <#
     .SYNOPSIS
 
-    Sets the SLA Domain for a selected Office 365 user.
+    Sets the SLA Domain for a selected Office 365 object (user or subscription).
 
     .DESCRIPTION
 
-    Sets the protection for an O365 mailbox in a given Polaris instance, taking 
-    an API token, Polaris URL, user ID, and SLA ID.
+    Sets the protection for an O365 user or subscription in a given Polaris instance, taking 
+    an API token, Polaris URL, object ID, and SLA ID.
 
     .PARAMETER Token
     Polaris API Token.
@@ -606,7 +606,7 @@ function Set-PolarisO365ObjectSla() {
 
     .EXAMPLE
 
-    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID 'UNPROTECTED'
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_subscription.id -SlaID 'UNPROTECTED'
     Success
     #>
 
