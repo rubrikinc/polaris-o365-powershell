@@ -559,7 +559,7 @@ function Get-PolarisO365User() {
     return $user_details
 }
 
-function Set-PolarisO365User() {
+function Set-PolarisO365ObjectSla() {
     <#
     .SYNOPSIS
 
@@ -576,16 +576,18 @@ function Set-PolarisO365User() {
     .PARAMETER PolarisURL
     The URL for the Polaris instance in the form 'https://myurl'
 
-    .PARAMETER UserID
-    The user ID for an O365 user. Can be obtained using 'Get-PolarisO365User' or 
-    'Get-PolarisO365Users' commands.
+    .PARAMETER ObjectID
+    The object ID for an O365 user or subscription. Can be obtained using 'Get-PolarisO365User', 
+    'Get-PolarisO365Users', or 'Get-PolarisO365Subscriptions' commands.
 
     .PARAMETER SlaID
-    The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command.
+    The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command. Use the string 
+    'UNPROTECTED' to remove any SLA from this object, or the string 'DONOTPROTECT' to explicitly not protect 
+    this or any child objects.
 
     .INPUTS
 
-    None. You cannot pipe objects to Set-PolarisO365User.
+    None. You cannot pipe objects to Set-PolarisO365ObjectSla.
 
     .OUTPUTS
 
@@ -594,7 +596,17 @@ function Set-PolarisO365User() {
 
     .EXAMPLE
 
-    PS> Set-PolarisO365User -Token $token -PolarisURL $url -UserID $my_user.id -SlaID $my_sla.id
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID $my_sla.id
+    Success
+    
+    .EXAMPLE
+
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID 'DONOTPROTECT'
+    Success
+
+    .EXAMPLE
+
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID 'UNPROTECTED'
     Success
     #>
 
@@ -604,7 +616,7 @@ function Set-PolarisO365User() {
         [Parameter(Mandatory=$True)]
         [String]$PolarisURL,
         [Parameter(Mandatory=$True)]
-        [String]$UserID,
+        [String]$ObjectID,
         [Parameter(Mandatory=$True)]
         [String]$SlaID
     )
@@ -622,7 +634,7 @@ function Set-PolarisO365User() {
         "variables" = @{
             "globalSlaAssignType" = "protectWithSlaId";
             "globalSlaOptionalFid" = $SlaID;
-            "objectIds" = @($UserID);
+            "objectIds" = @($ObjectID);
         };
         "query" = "mutation AssignSLA(`$globalSlaOptionalFid: UUID, `$globalSlaAssignType: SlaAssignTypeEnum!, `$objectIds: [UUID!]!) {
             assignSla(globalSlaOptionalFid: `$globalSlaOptionalFid, globalSlaAssignType: `$globalSlaAssignType, objectIds: `$objectIds) {
@@ -631,10 +643,21 @@ function Set-PolarisO365User() {
         }";
     }
 
+    if ($SlaID -eq 'UNPROTECTED') {
+        $payload['variables']['globalSlaOptionalFid'] = $null
+        $payload['variables']['globalSlaAssignType'] = 'noAssignment'
+    }
+
+    if ($SlaID -eq 'DONOTPROTECT') {
+        $payload['variables']['globalSlaOptionalFid'] = $null
+        $payload['variables']['globalSlaAssignType'] = 'doNotProtect'
+    }
+
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     if ($response.data.assignSla.success = $true) {
         return 'Success'
     } else {
-        throw 'Issue assigning SLA domain to user'
+        throw 'Issue assigning SLA domain to object'
     }
 }
+

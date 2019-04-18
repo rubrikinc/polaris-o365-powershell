@@ -39,12 +39,12 @@ This token can then be used with the other commands in the module.
 
 The following commands are available in the module:
 
-* Get-PolarisToken
-* Get-PolarisSLA
-* Get-PolarisO365Subscriptions
-* Get-PolarisO365Users
-* Get-PolarisO365User
-* Set-PolarisO365User
+* `Get-PolarisToken`
+* `Get-PolarisSLA`
+* `Get-PolarisO365Subscriptions`
+* `Get-PolarisO365Users`
+* `Get-PolarisO365User`
+* `Set-PolarisO365ObjectSla`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
 
@@ -69,5 +69,5 @@ $my_sla = Get-PolarisSLA -Token $token -PolarisURL $url -Name $sla_name
 # get our user
 $my_user = Get-PolarisO365User -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
 # set the SLA domain for our user
-Set-PolarisO365User -Token $token -PolarisURL $url -UserID $my_user.id -SLAID $my_sla.id
+Set-PolarisO365Object -Token $token -PolarisURL $url -ObjectID $my_user.id -SLAID $my_sla.id
 ```
