@@ -69,7 +69,8 @@ function Get-PolarisSLA() {
     The URL for the Polaris instance in the form 'https://myurl'
 
     .PARAMETER Name
-    Optional. The name of the required SLA Domain.
+    Optional. The name of the required SLA Domain. If none is provided, all
+    SLAs are returned.
 
     .INPUTS
 
@@ -114,7 +115,6 @@ function Get-PolarisSLA() {
                     node {
                         id
                         name
-                        description
                     }
                 }
                 pageInfo {
@@ -131,10 +131,9 @@ function Get-PolarisSLA() {
     $sla_detail = @()
 
     foreach ($edge in $response.data.globalSlaConnection.edges) {
-        $row = '' | select name,id,description
+        $row = '' | select name,id
         $row.name = $edge.node.name
         $row.id = $edge.node.id
-        $row.description = $edge.node.description
         $sla_detail += $row
     }
 
