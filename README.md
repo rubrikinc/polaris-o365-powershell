@@ -8,17 +8,17 @@ their current SLA assignment and change those SLA assignments.
 
 ## :hammer: Installation
 
-See [Quick Start Guide](QUIK_START.md) for installation and usage instructions.
+See [Quick Start Guide](QUICK_START.md) for installation and usage instructions.
 
 ## :mag: Example
 
-See [Quick Start Guide](QUIK_START.md) for examples.
+See [Quick Start Guide](QUICK_START.md) for examples.
 
 ## :blue_book: Documentation
 
 Here are some resources to get you started! If you find any challenges from this project are not properly documented or are unclear, please raise an issueand let us know! This is a fun, safe environment - don't worry if you're a GitHub newbie! :heart:
 
-* [Quick Start Guide](QUIK_START.md)
+* [Quick Start Guide](QUICK_START.md)
 * [Rubrik API Documentation](https://github.com/rubrikinc/api-documentation)
 
 ## :muscle: How You Can Help
