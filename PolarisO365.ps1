@@ -59,7 +59,7 @@ function Get-PolarisSLA() {
 
     .DESCRIPTION
 
-    Returns SLA Domains for a given Polaris instance. This can be used to return 
+    Returns SLA Domains for a given Polaris instance. This can be used to return
     based on a name query, by using the 'Name' parameter.
 
     .PARAMETER Token
@@ -78,7 +78,7 @@ function Get-PolarisSLA() {
 
     .OUTPUTS
 
-    System.Object. Get-PolarisSLA returns an array containing the ID, Name, 
+    System.Object. Get-PolarisSLA returns an array containing the ID, Name,
     and Description of the returned SLA Domains.
 
     .EXAMPLE
@@ -97,13 +97,13 @@ function Get-PolarisSLA() {
         [Parameter(Mandatory=$False)]
         [String]$Name
     )
-    
+
     $headers = @{
         'Content-Type' = 'application/json';
         'Accept' = 'application/json';
         'Authorization' = $('Bearer '+$Token);
     }
-    
+
     $endpoint = $PolarisURL + '/api/graphql'
 
     $payload = @{
@@ -131,7 +131,7 @@ function Get-PolarisSLA() {
     $sla_detail = @()
 
     foreach ($edge in $response.data.globalSlaConnection.edges) {
-        $row = '' | select name,id
+        $row = '' | Select-Object name,id,description
         $row.name = $edge.node.name
         $row.id = $edge.node.id
         $sla_detail += $row
@@ -148,7 +148,7 @@ function Get-PolarisO365Subscriptions {
 
     .DESCRIPTION
 
-    Returns an array of Office 365 subscriptions from a given Polaris instance, taking 
+    Returns an array of Office 365 subscriptions from a given Polaris instance, taking
     an API token, and Polaris URL.
 
     .PARAMETER Token
@@ -163,7 +163,7 @@ function Get-PolarisO365Subscriptions {
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365Subscriptions returns an array containing the ID, Name, 
+    System.Object. Get-PolarisO365Subscriptions returns an array containing the ID, Name,
     status, count of users, count of unprotected users, and SLA details for the
     returned O365 Subscriptions.
 
@@ -194,11 +194,11 @@ function Get-PolarisO365Subscriptions {
         'Accept' = 'application/json';
         'Authorization' = $('Bearer '+$Token);
     }
-    
+
     $endpoint = $PolarisURL + '/api/graphql'
-    
+
     # Get a list of all the orgs
-    
+
     $payload = @{
         "operationName" = "O365OrgList";
         "query" = "query O365OrgList(`$after: String, `$first: Int) {
@@ -220,18 +220,18 @@ function Get-PolarisO365Subscriptions {
             "first" = $null;
         }
     }
-    
+
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    
+
     $org_ids = @()
     foreach ($org in $response.data.o365Orgs.edges) {
         $org_ids += $org.node.id
     }
-    
+
     # For each org let's get the details
-    
+
     $org_details = @()
-    
+
     foreach ($org_id in $org_ids) {
         $payload = @{
             "operationName" = "o365OrgCard";
@@ -258,10 +258,10 @@ function Get-PolarisO365Subscriptions {
                 "id" = "$org_id";
             }
         }
-    
+
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    
-        $row = '' | select name,id,status,usersCount,unprotectedUsersCount,effectiveSlaDomainName,configuredSlaDomainName,effectiveSlaDomainId,configuredSlaDomainId
+
+        $row = '' | Select-Object name,id,status,usersCount,unprotectedUsersCount,effectiveSlaDomainName,configuredSlaDomainName,effectiveSlaDomainId,configuredSlaDomainId
         $row.name = $response.data.o365Org.name
         $row.id = $response.data.o365Org.id
         $row.status = $response.data.o365Org.status
@@ -273,7 +273,7 @@ function Get-PolarisO365Subscriptions {
         $row.configuredSlaDomainId = $response.data.o365Org.effectiveSlaDomain.name
         $org_details += $row
     }
-    
+
     return $org_details
 }
 
@@ -285,7 +285,7 @@ function Get-PolarisO365Users() {
 
     .DESCRIPTION
 
-    Returns an array of Office 365 users from a given subscription and Polaris instance, taking 
+    Returns an array of Office 365 users from a given subscription and Polaris instance, taking
     an API token, Polaris URL, and subscription ID.
 
     .PARAMETER Token
@@ -295,7 +295,7 @@ function Get-PolarisO365Users() {
     The URL for the Polaris instance in the form 'https://myurl'
 
     .PARAMETER SubscriptionID
-    The Polaris subscription ID for a given O365 subscription. Can be obtained with the 
+    The Polaris subscription ID for a given O365 subscription. Can be obtained with the
     'Get-PolarisO365Subscriptions' command.
 
     .INPUTS
@@ -304,7 +304,7 @@ function Get-PolarisO365Users() {
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365Users returns an array containing the ID, Name, 
+    System.Object. Get-PolarisO365Users returns an array containing the ID, Name,
     email address, and SLA details for the returned O365 users.
 
     .EXAMPLE
@@ -402,7 +402,7 @@ function Get-PolarisO365Users() {
     $user_details = @()
 
     foreach ($node in $node_array) {
-        $row = '' | select name,id,emailAddress,slaAssignment,effectiveSlaDomainName
+        $row = '' | Select-Object name,id,emailAddress,slaAssignment,effectiveSlaDomainName
         $row.name = $node.name
         $row.id = $node.id
         $row.emailAddress = $node.emailAddress
@@ -422,7 +422,7 @@ function Get-PolarisO365User() {
 
     .DESCRIPTION
 
-    Returns a filtered list of Office 365 users from a given subscription and Polaris instance, taking 
+    Returns a filtered list of Office 365 users from a given subscription and Polaris instance, taking
     an API token, Polaris URL, subscription ID, and search string.
 
     .PARAMETER Token
@@ -432,7 +432,7 @@ function Get-PolarisO365User() {
     The URL for the Polaris instance in the form 'https://myurl'
 
     .PARAMETER SubscriptionID
-    The Polaris subscription ID for a given O365 subscription. Can be obtained with the 
+    The Polaris subscription ID for a given O365 subscription. Can be obtained with the
     'Get-PolarisO365Subscriptions' command.
 
     .PARAMETER SearchString
@@ -444,7 +444,7 @@ function Get-PolarisO365User() {
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365User returns an array containing the ID, Name, 
+    System.Object. Get-PolarisO365User returns an array containing the ID, Name,
     email address, and SLA details for the returned O365 users.
 
     .EXAMPLE
@@ -546,7 +546,7 @@ function Get-PolarisO365User() {
     $user_details = @()
 
     foreach ($node in $node_array) {
-        $row = '' | select name,id,emailAddress,slaAssignment,effectiveSlaDomainName
+        $row = '' | Select-Object name,id,emailAddress,slaAssignment,effectiveSlaDomainName
         $row.name = $node.name
         $row.id = $node.id
         $row.emailAddress = $node.emailAddress
@@ -566,7 +566,7 @@ function Set-PolarisO365ObjectSla() {
 
     .DESCRIPTION
 
-    Sets the protection for an O365 user or subscription in a given Polaris instance, taking 
+    Sets the protection for an O365 user or subscription in a given Polaris instance, taking
     an API token, Polaris URL, object ID, and SLA ID.
 
     .PARAMETER Token
@@ -576,12 +576,12 @@ function Set-PolarisO365ObjectSla() {
     The URL for the Polaris instance in the form 'https://myurl'
 
     .PARAMETER ObjectID
-    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisO365User', 
+    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisO365User',
     'Get-PolarisO365Users', or 'Get-PolarisO365Subscriptions' commands. This can take an array of object IDs.
 
     .PARAMETER SlaID
-    The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command. Use the string 
-    'UNPROTECTED' to remove any SLA from this object, or the string 'DONOTPROTECT' to explicitly not protect 
+    The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command. Use the string
+    'UNPROTECTED' to remove any SLA from this object, or the string 'DONOTPROTECT' to explicitly not protect
     this or any child objects.
 
     .INPUTS
@@ -590,14 +590,14 @@ function Set-PolarisO365ObjectSla() {
 
     .OUTPUTS
 
-    System.String. This returns the string 'Success' if the modification was successful, or throws an 
+    System.String. This returns the string 'Success' if the modification was successful, or throws an
     error if the command is not successful.
 
     .EXAMPLE
 
     PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID $my_sla.id
     Success
-    
+
     .EXAMPLE
 
     PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID 'DONOTPROTECT'
@@ -637,7 +637,7 @@ function Set-PolarisO365ObjectSla() {
         };
         "query" = "mutation AssignSLA(`$globalSlaOptionalFid: UUID, `$globalSlaAssignType: SlaAssignTypeEnum!, `$objectIds: [UUID!]!) {
             assignSla(globalSlaOptionalFid: `$globalSlaOptionalFid, globalSlaAssignType: `$globalSlaAssignType, objectIds: `$objectIds) {
-                success    
+                success
             }
         }";
     }
@@ -653,7 +653,7 @@ function Set-PolarisO365ObjectSla() {
     }
 
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    if ($response.data.assignSla.success = $true) {
+    if ($response.data.assignSla.success -eq $true) {
         return 'Success'
     } else {
         throw 'Issue assigning SLA domain to object'
