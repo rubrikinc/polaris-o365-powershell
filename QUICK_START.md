@@ -52,22 +52,32 @@ Each command has help which describes their usage and parameters, these can be s
 
 ```powershell
 . .\PolarisO365.ps1 # import the module
+
 # set variables
 $url = 'https://myinstance.my.rubrik.com'
 $username = 'steve@mydomain.com'
 $password = 'MyPass123!'
 $sub_name = 'mysubscription'
 $sla_name = 'Bronze'
+
 # get a token
 $token = Get-PolarisToken -Username $username -Password $password -PolarisURL $url
+
 # get all O365 subscriptions
 $all_subs = Get-PolarisO365Subscriptions -Token $token -PolarisURL $url
+
 # get just the subscription we want
 $my_sub = $all_subs | ?{$_.name -eq $sub_name}
+
 # get our SLA domain
 $my_sla = Get-PolarisSLA -Token $token -PolarisURL $url -Name $sla_name
+
 # get our user
 $my_user = Get-PolarisO365User -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
+
 # set the SLA domain for our user
-Set-PolarisO365Object -Token $token -PolarisURL $url -ObjectID $my_user.id -SLAID $my_sla.id
+Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SLAID $my_sla.id
+
+# or set the SLA domain of our subscription
+Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_sub.id -SLAID $my_sla.id
 ```
