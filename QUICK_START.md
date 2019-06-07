@@ -81,3 +81,26 @@ Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -S
 # or set the SLA domain of our subscription
 Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_sub.id -SLAID $my_sla.id
 ```
+
+## Bulk Assignment Use-case
+
+We can bulk assign SLAs to O365 accounts, if for example we want to do a staggered migration. The following code can be used to do this:
+
+```powershell
+$token = Get-PolarisToken -Username $username -Password $password -PolarisURL $url
+$all_orgs = Get-PolarisO365Subscriptions -Token $token -PolarisURL $url
+$my_org = $all_orgs | ?{$_.name -eq $org_name}
+$all_slas = Get-PolarisSLA -Token $token -PolarisURL $url
+$my_sla = $all_slas | ?{$_.name -eq 'Gold'}
+$all_users = Get-PolarisO365Users -Token $token -PolarisURL $url -SubscriptionId $my_org.id
+$500_users = $all_users | select -First 500
+$assign = Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $500_users.id -SlaID $my_sla.id
+```
+
+The key line here is this:
+
+```powershell
+$500_users = $all_users | select -First 500
+```
+
+Here we are just picking the first 500 accounts, but more specific selection could be achieved using standard PowerShell filtering on the `$all_users` array.
