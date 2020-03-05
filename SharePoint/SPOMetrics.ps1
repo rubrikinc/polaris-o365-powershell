@@ -321,12 +321,6 @@ else
 }
 $TenantUrl=$TenantAdminURL.Replace("-admin","")
 Connect-SPOService -Url $TenantAdminURL -Credential $Credential
-
-#$testSite="https://rdnn14.sharepoint.com/sites/crackers"
-#$testSite="https://rdnn14.sharepoint.com/sites/O365Engineering"
-#$AllSiteCollections=get-sposite -Identity $testSite  | Select Url,Title,StorageUsageCurrent| Sort-Object StorageUsageCurrent -Descending
-
-#Write-host $AllSites
 #if($AllSites)
 #{
     $AllSiteCollections=get-sposite -Limit All  | Select Url,Title,StorageUsageCurrent| Sort-Object StorageUsageCurrent -Descending
