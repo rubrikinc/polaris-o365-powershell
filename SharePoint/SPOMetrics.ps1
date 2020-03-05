@@ -1,4 +1,33 @@
-﻿[CmdletBinding()]param 
+﻿<#
+    .SYNOPSIS
+    This scripts scans all the site collections and subsites in the tenant nd generate a metrics report for every site.
+    .DESCRIPTION
+    Generate a csv file which contains the information about objects of each site for e.g 
+    #of lists in site
+    #of libraries in site
+    #of folders in a library
+    #of files in a library
+    #of groups for a site
+    .PARAMETER User
+    User ID of the SharePoint admin.
+    .PARAMETER Password
+    Password of the Admin user
+    .PARAMETER Credentials
+    Credentials of the Admin user, in case the UserId and Password are not supplied.
+    .PARAMETER ALL
+    Switch to generate the report on all sites
+    .PARAMETER CSV
+    A list of sites in case the metrics is needed for a subset of sites 
+    .PARAMETER AdminURL
+    Url of the tenant admin site 
+    
+    .OUTPUT 
+    Two CSV files, One for the libraries in the site and other for the Lists in the sites
+    .EXAMPLE
+    PS> ./SPOMetrics.ps1 -User <UserID> -Password <Password> -AdminURL <Tenant Admin URL> -ALL 
+    #>
+
+[CmdletBinding()]param 
 (
     [Parameter(Mandatory=$true, ValueFromPipeline=$false, ParameterSetName="UserPwd", HelpMessage='UserId for the Admin user for SharePoint Online.')]
 	[Alias("User")]
@@ -13,9 +42,9 @@
 	[System.Management.Automation.PSCredential]
     $Creds,
 
-	[Parameter(Mandatory=$false, ValueFromPipeline=$false, HelpMessage='Set -all true for all sites.')]
-	[Alias("All")]
-	[switch]$allSites = $false,
+	#[Parameter(Mandatory=$false, ValueFromPipeline=$false, HelpMessage='Set -all true for all sites.')]
+	#[Alias("All")]
+	#[switch]$allSites = $false,
 
 
 	[Parameter(Mandatory=$true, ValueFromPipeline=$false, HelpMessage='Set -all true for all sites.')]
@@ -41,12 +70,9 @@ Function Get-ListsFromSite() {
 }
 
 Function Get-GroupsFromSite($site) {
-    #Write-host "################################################"
     $site
     $groups=Get-PnPGroup
     $groups
-    #Write-host "################################################"
-    #Write-host "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 
     return $groups
 }
@@ -300,7 +326,11 @@ Connect-SPOService -Url $TenantAdminURL -Credential $Credential
 #$testSite="https://rdnn14.sharepoint.com/sites/O365Engineering"
 #$AllSiteCollections=get-sposite -Identity $testSite  | Select Url,Title,StorageUsageCurrent| Sort-Object StorageUsageCurrent -Descending
 
-$AllSiteCollections=get-sposite -Limit All  | Select Url,Title,StorageUsageCurrent| Sort-Object StorageUsageCurrent -Descending
+#Write-host $AllSites
+#if($AllSites)
+#{
+    $AllSiteCollections=get-sposite -Limit All  | Select Url,Title,StorageUsageCurrent| Sort-Object StorageUsageCurrent -Descending
+#}
 #write-host $AllSiteCollections
 Get-Metrics($AllSiteCollections)
 
