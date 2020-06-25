@@ -31,16 +31,16 @@ function Get-PolarisToken() {
     #>
 
     param(
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$Username,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$Password,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$PolarisURL
     )
     $headers = @{
         'Content-Type' = 'application/json';
-        'Accept' = 'application/json';
+        'Accept'       = 'application/json';
     }
     $payload = @{
         "username" = $Username;
@@ -90,26 +90,26 @@ function Get-PolarisSLA() {
     #>
 
     param(
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$Token,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$PolarisURL,
-        [Parameter(Mandatory=$False)]
+        [Parameter(Mandatory = $False)]
         [String]$Name
     )
 
     $headers = @{
-        'Content-Type' = 'application/json';
-        'Accept' = 'application/json';
-        'Authorization' = $('Bearer '+$Token);
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
     }
 
     $endpoint = $PolarisURL + '/api/graphql'
 
     $payload = @{
         "operationName" = "SLAList";
-        "variables" = @{"first" = 20; "name" = $Name};
-        "query" = "query SLAList(`$after: String, `$first: Int, `$name: String) {
+        "variables"     = @{"first" = 20; "name" = $Name };
+        "query"         = "query SLAList(`$after: String, `$first: Int, `$name: String) {
             globalSlaConnection(after: `$after, first: `$first, filter: [{field: NAME, text: `$name}]) {
                 edges {
                     node {
@@ -131,7 +131,7 @@ function Get-PolarisSLA() {
     $sla_detail = @()
 
     foreach ($edge in $response.data.globalSlaConnection.edges) {
-        $row = '' | Select-Object name,id,description
+        $row = '' | Select-Object name, id, description
         $row.name = $edge.node.name
         $row.id = $edge.node.id
         $sla_detail += $row
@@ -183,16 +183,16 @@ function Get-PolarisO365Subscriptions {
     #>
 
     param(
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$Token,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$PolarisURL
     )
 
     $headers = @{
-        'Content-Type' = 'application/json';
-        'Accept' = 'application/json';
-        'Authorization' = $('Bearer '+$Token);
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
     }
 
     $endpoint = $PolarisURL + '/api/graphql'
@@ -201,7 +201,7 @@ function Get-PolarisO365Subscriptions {
 
     $payload = @{
         "operationName" = "O365OrgList";
-        "query" = "query O365OrgList(`$after: String, `$first: Int) {
+        "query"         = "query O365OrgList(`$after: String, `$first: Int) {
             o365Orgs(after: `$after, first: `$first, filter: []) {
                 edges {
                     node {
@@ -215,7 +215,7 @@ function Get-PolarisO365Subscriptions {
                 }
             }
         }";
-        "variables" = @{
+        "variables"     = @{
             "after" = $null;
             "first" = $null;
         }
@@ -235,7 +235,7 @@ function Get-PolarisO365Subscriptions {
     foreach ($org_id in $org_ids) {
         $payload = @{
             "operationName" = "o365OrgCard";
-            "query" = "query o365OrgCard(`$id: UUID!) {
+            "query"         = "query o365OrgCard(`$id: UUID!) {
                 o365Org(fid: `$id) {
                     id
                     status
@@ -254,14 +254,14 @@ function Get-PolarisO365Subscriptions {
                     unprotectedUsersCount
                 }
             }";
-            "variables" = @{
+            "variables"     = @{
                 "id" = "$org_id";
             }
         }
 
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
 
-        $row = '' | Select-Object name,id,status,usersCount,unprotectedUsersCount,effectiveSlaDomainName,configuredSlaDomainName,effectiveSlaDomainId,configuredSlaDomainId
+        $row = '' | Select-Object name, id, status, usersCount, unprotectedUsersCount, effectiveSlaDomainName, configuredSlaDomainName, effectiveSlaDomainId, configuredSlaDomainId
         $row.name = $response.data.o365Org.name
         $row.id = $response.data.o365Org.id
         $row.status = $response.data.o365Org.status
@@ -319,18 +319,18 @@ function Get-PolarisO365Users() {
     #>
 
     param(
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$Token,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$PolarisURL,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$SubscriptionId
     )
 
     $headers = @{
-        'Content-Type' = 'application/json';
-        'Accept' = 'application/json';
-        'Authorization' = $('Bearer '+$Token);
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
     }
 
     $endpoint = $PolarisURL + '/api/graphql'
@@ -341,7 +341,7 @@ function Get-PolarisO365Users() {
 
     $payload = @{
         "operationName" = "O365UserList";
-        "query" = "query O365UserList(`$first: Int!, `$after: String, `$id: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        "query"         = "query O365UserList(`$first: Int!, `$after: String, `$id: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
             o365Org(fid: `$id) {
                 id
                 childConnection(first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder, after: `$after) {
@@ -352,18 +352,6 @@ function Get-PolarisO365Users() {
                             emailAddress
                             effectiveSlaDomain {
                                 name
-                            }
-                            authorizedOperations {
-                                id
-                                operations
-                                __typename
-                            }
-                            childConnection(filter: []) {
-                                nodes {
-                                    id
-                                    name
-                                    objectType
-                                }
                             }
                             slaAssignment
                         }
@@ -376,17 +364,17 @@ function Get-PolarisO365Users() {
                 }
             }
         }";
-        "variables" = @{
-            "after" = $null;
-            "filter" = @(
+        "variables"     = @{
+            "after"     = $null;
+            "filter"    = @(
                 @{
                     "field" = "IS_RELIC";
                     "texts" = @("false")
                 };
             )
-            "first" = 100;
-            "id" = $SubscriptionId;
-            "sortBy" = "EMAIL_ADDRESS";
+            "first"     = 100;
+            "id"        = $SubscriptionId;
+            "sortBy"    = "EMAIL_ADDRESS";
             "sortOrder" = "ASC";
         }
     }
@@ -402,7 +390,7 @@ function Get-PolarisO365Users() {
     $user_details = @()
 
     foreach ($node in $node_array) {
-        $row = '' | Select-Object name,id,emailAddress,slaAssignment,effectiveSlaDomainName
+        $row = '' | Select-Object name, id, emailAddress, slaAssignment, effectiveSlaDomainName
         $row.name = $node.name
         $row.id = $node.id
         $row.emailAddress = $node.emailAddress
@@ -459,20 +447,20 @@ function Get-PolarisO365User() {
     #>
 
     param(
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$Token,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$PolarisURL,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$SubscriptionId,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$SearchString
     )
 
     $headers = @{
-        'Content-Type' = 'application/json';
-        'Accept' = 'application/json';
-        'Authorization' = $('Bearer '+$Token);
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
     }
 
     $endpoint = $PolarisURL + '/api/graphql'
@@ -483,10 +471,10 @@ function Get-PolarisO365User() {
 
     $payload = @{
         "operationName" = "O365UserList";
-        "variables" = @{
-            "id" = $SubscriptionId;
-            "first" = 100;
-            "filter" = @(
+        "variables"     = @{
+            "id"        = $SubscriptionId;
+            "first"     = 100;
+            "filter"    = @(
                 @{
                     "field" = "IS_RELIC";
                     "texts" = @("false");
@@ -496,10 +484,10 @@ function Get-PolarisO365User() {
                     "texts" = @($SearchString);
                 }
             );
-            "sortBy" = "EMAIL_ADDRESS";
+            "sortBy"    = "EMAIL_ADDRESS";
             "sortOrder" = "ASC";
         };
-        "query" = "query O365UserList(`$first: Int!, `$after: String, `$id: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        "query"         = "query O365UserList(`$first: Int!, `$after: String, `$id: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
             o365Org(fid: `$id) {
                 id
                 childConnection(first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder, after: `$after) {
@@ -510,17 +498,6 @@ function Get-PolarisO365User() {
                             emailAddress
                             effectiveSlaDomain {
                                 name
-                            }
-                            authorizedOperations {
-                                id
-                                operations
-                            }
-                            childConnection(filter: []) {
-                                nodes {
-                                    id
-                                    name
-                                    objectType
-                                }
                             }
                             slaAssignment
                         }
@@ -546,7 +523,7 @@ function Get-PolarisO365User() {
     $user_details = @()
 
     foreach ($node in $node_array) {
-        $row = '' | Select-Object name,id,emailAddress,slaAssignment,effectiveSlaDomainName
+        $row = '' | Select-Object name, id, emailAddress, slaAssignment, effectiveSlaDomainName
         $row.name = $node.name
         $row.id = $node.id
         $row.emailAddress = $node.emailAddress
@@ -610,32 +587,32 @@ function Set-PolarisO365ObjectSla() {
     #>
 
     param(
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$Token,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$PolarisURL,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String[]]$ObjectID,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory = $True)]
         [String]$SlaID
     )
 
     $headers = @{
-        'Content-Type' = 'application/json';
-        'Accept' = 'application/json';
-        'Authorization' = $('Bearer '+$Token);
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
     }
 
     $endpoint = $PolarisURL + '/api/graphql'
 
     $payload = @{
         "operationName" = "AssignSLA";
-        "variables" = @{
-            "globalSlaAssignType" = "protectWithSlaId";
+        "variables"     = @{
+            "globalSlaAssignType"  = "protectWithSlaId";
             "globalSlaOptionalFid" = $SlaID;
-            "objectIds" = $ObjectID;
+            "objectIds"            = $ObjectID;
         };
-        "query" = "mutation AssignSLA(`$globalSlaOptionalFid: UUID, `$globalSlaAssignType: SlaAssignTypeEnum!, `$objectIds: [UUID!]!) {
+        "query"         = "mutation AssignSLA(`$globalSlaOptionalFid: UUID, `$globalSlaAssignType: SlaAssignTypeEnum!, `$objectIds: [UUID!]!) {
             assignSla(globalSlaOptionalFid: `$globalSlaOptionalFid, globalSlaAssignType: `$globalSlaAssignType, objectIds: `$objectIds) {
                 success
             }
@@ -655,8 +632,8 @@ function Set-PolarisO365ObjectSla() {
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     if ($response.data.assignSla.success -eq $true) {
         return 'Success'
-    } else {
+    }
+    else {
         throw 'Issue assigning SLA domain to object'
     }
 }
-
