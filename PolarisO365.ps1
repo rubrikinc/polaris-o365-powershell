@@ -315,6 +315,7 @@ function Get-PolarisO365Mailboxes() {
     id                          : 12341234-1234-1234-abcd-123456789012
     userPrincipalName           : milan.kundera@mydomain.onmicrosoft.com
     slaAssignment               : Direct
+    effectiveSlaDomainName      : Gold
     #>
 
     param(
@@ -352,24 +353,24 @@ function Get-PolarisO365Mailboxes() {
                         }
                         slaAssignment
                     }
-                    }
-                    pageInfo {
-                        endCursor
-                        hasNextPage
-                        hasPreviousPage
-                    }
                 }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                    hasPreviousPage
+                }
+            }
         }";
         "variables"     = @{
             "after"     = $null;
             "filter"    = @(
                 @{
                     "field" = "IS_RELIC";
-                    "texts" = @("false")
+                    "texts" = @("false");
                 };
             )
             "first"     = 100;
-            "orgId"        = $SubscriptionId;
+            "orgId"     = $SubscriptionId;
             "sortBy"    = "EMAIL_ADDRESS";
             "sortOrder" = "ASC";
         }
@@ -479,20 +480,20 @@ function Get-PolarisO365Mailbox() {
                         }
                         slaAssignment
                     }
-                    }
-                    pageInfo {
-                        endCursor
-                        hasNextPage
-                        hasPreviousPage
-                    }
                 }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                    hasPreviousPage
+                }
+            }
         }";
         "variables"     = @{
             "after"     = $null;
             "filter"    = @(
                 @{
                     "field" = "IS_RELIC";
-                    "texts" = @("false")
+                    "texts" = @("false");
                 },
                 @{
                     "field" = "NAME_OR_EMAIL_ADDRESS";
@@ -500,7 +501,7 @@ function Get-PolarisO365Mailbox() {
                 }
             );
             "first"     = 100;
-            "orgId"        = $SubscriptionId;
+            "orgId"     = $SubscriptionId;
             "sortBy"    = "EMAIL_ADDRESS";
             "sortOrder" = "ASC";
         }
