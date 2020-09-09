@@ -277,15 +277,15 @@ function Get-PolarisO365Subscriptions {
     return $org_details
 }
 
-function Get-PolarisO365Users() {
+function Get-PolarisO365Mailboxes() {
     <#
     .SYNOPSIS
 
-    Returns all O365 users for a given subscription in a given Polaris instance.
+    Returns all O365 mailboxes for a given subscription in a given Polaris instance.
 
     .DESCRIPTION
 
-    Returns an array of Office 365 users from a given subscription and Polaris instance, taking
+    Returns an array of Office 365 mailboxes from a given subscription and Polaris instance, taking
     an API token, Polaris URL, and subscription ID.
 
     .PARAMETER Token
@@ -300,22 +300,22 @@ function Get-PolarisO365Users() {
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisO365Users.
+    None. You cannot pipe objects to Get-PolarisO365Mailboxes.
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365Users returns an array containing the ID, Name,
-    email address, and SLA details for the returned O365 users.
+    System.Object. Get-PolarisO365Mailboxes returns an array containing the ID, Name,
+    email address, and SLA details for the returned O365 mailboxes.
 
     .EXAMPLE
 
-    PS> Get-PolarisO365Users -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    PS> Get-PolarisO365Mailboxes -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
 
-    name                   : Milan Kundera
-    id                     : 12341234-1234-1234-abcd-123456789012
-    emailAddress           : milan.kundera@mydomain.onmicrosoft.com
-    slaAssignment          : Direct
-    effectiveSlaDomainName : Gold
+    name                        : Milan Kundera
+    id                          : 12341234-1234-1234-abcd-123456789012
+    userPrincipalName           : milan.kundera@mydomain.onmicrosoft.com
+    slaAssignment               : Direct
+    effectiveSlaDomainName      : Gold
     #>
 
     param(
@@ -340,27 +340,24 @@ function Get-PolarisO365Users() {
     $node_array = @()
 
     $payload = @{
-        "operationName" = "O365UserList";
-        "query"         = "query O365UserList(`$first: Int!, `$after: String, `$id: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
-            o365Org(fid: `$id) {
-                id
-                childConnection(first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder, after: `$after) {
-                    edges {
-                        node {
-                            id
+        "operationName" = "O365MailboxList";
+        "query"         = "query O365MailboxList(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            o365Mailboxes(o365OrgId: `$orgId, after: `$after, first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+                edges {
+                    node {
+                        id
+                        name
+                        userPrincipalName
+                        effectiveSlaDomain {
                             name
-                            emailAddress
-                            effectiveSlaDomain {
-                                name
-                            }
-                            slaAssignment
                         }
+                        slaAssignment
                     }
-                    pageInfo {
-                        endCursor
-                        hasNextPage
-                        hasPreviousPage
-                    }
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                    hasPreviousPage
                 }
             }
         }";
@@ -369,48 +366,48 @@ function Get-PolarisO365Users() {
             "filter"    = @(
                 @{
                     "field" = "IS_RELIC";
-                    "texts" = @("false")
+                    "texts" = @("false");
                 };
             )
             "first"     = 100;
-            "id"        = $SubscriptionId;
+            "orgId"     = $SubscriptionId;
             "sortBy"    = "EMAIL_ADDRESS";
             "sortOrder" = "ASC";
         }
     }
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    $node_array += $response.data.o365Org.childConnection.edges.node
+    $node_array += $response.data.o365Mailboxes.edges
     # get all pages of results
-    while ($response.data.o365Org.childConnection.pageInfo.hasNextPage) {
-        $payload.variables.after = $response.data.o365Org.childConnection.pageInfo.endCursor
+    while ($response.data.o365Mailboxes.pageInfo.hasNextPage) {
+        $payload.variables.after = $response.data.o365Mailboxes.pageInfo.endCursor
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-        $node_array += $response.data.o365Org.childConnection.edges.node
+        $node_array += $response.data.o365Mailboxes.edges
     }
 
-    $user_details = @()
+    $mailbox_details = @()
 
     foreach ($node in $node_array) {
-        $row = '' | Select-Object name, id, emailAddress, slaAssignment, effectiveSlaDomainName
-        $row.name = $node.name
-        $row.id = $node.id
-        $row.emailAddress = $node.emailAddress
-        $row.slaAssignment = $node.slaAssignment
-        $row.effectiveSlaDomainName = $node.effectiveSlaDomain.name
-        $user_details += $row
+        $row = '' | Select-Object name, id, userPrincipalName, slaAssignment, effectiveSlaDomainName
+        $row.name = $node.node.name
+        $row.id = $node.node.id
+        $row.userPrincipalName = $node.node.userPrincipalName
+        $row.slaAssignment = $node.node.slaAssignment
+        $row.effectiveSlaDomainName = $node.node.effectiveSlaDomain.name
+        $mailbox_details += $row
     }
 
-    return $user_details
+    return $mailbox_details
 }
 
-function Get-PolarisO365User() {
+function Get-PolarisO365Mailbox() {
     <#
     .SYNOPSIS
 
-    Returns a filtered list of O365 users for a given subscription in a given Polaris instance.
+    Returns a filtered list of O365 mailboxes for a given subscription in a given Polaris instance.
 
     .DESCRIPTION
 
-    Returns a filtered list of Office 365 users from a given subscription and Polaris instance, taking
+    Returns a filtered list of Office 365 mailboxes from a given subscription and Polaris instance, taking
     an API token, Polaris URL, subscription ID, and search string.
 
     .PARAMETER Token
@@ -424,20 +421,20 @@ function Get-PolarisO365User() {
     'Get-PolarisO365Subscriptions' command.
 
     .PARAMETER SearchString
-    Search string, used to filter user's name or email address.
+    Search string, used to filter mailbox's name or user principal name.
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisO365User.
+    None. You cannot pipe objects to Get-PolarisO365Mailbox.
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365User returns an array containing the ID, Name,
-    email address, and SLA details for the returned O365 users.
+    System.Object. Get-PolarisO365Mailbox returns an array containing the ID, Name,
+    email address, and SLA details for the returned O365 mailboxes.
 
     .EXAMPLE
 
-    PS> Get-PolarisO365User -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'Milan'
+    PS> Get-PolarisO365Mailbox -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'Milan'
 
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
@@ -470,10 +467,29 @@ function Get-PolarisO365User() {
     $node_array = @()
 
     $payload = @{
-        "operationName" = "O365UserList";
+        "operationName" = "O365MailboxList";
+        "query"         = "query O365MailboxList(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            o365Mailboxes(o365OrgId: `$orgId, after: `$after, first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+                edges {
+                    node {
+                        id
+                        name
+                        userPrincipalName
+                        effectiveSlaDomain {
+                            name
+                        }
+                        slaAssignment
+                    }
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                    hasPreviousPage
+                }
+            }
+        }";
         "variables"     = @{
-            "id"        = $SubscriptionId;
-            "first"     = 100;
+            "after"     = $null;
             "filter"    = @(
                 @{
                     "field" = "IS_RELIC";
@@ -484,55 +500,34 @@ function Get-PolarisO365User() {
                     "texts" = @($SearchString);
                 }
             );
+            "first"     = 100;
+            "orgId"     = $SubscriptionId;
             "sortBy"    = "EMAIL_ADDRESS";
             "sortOrder" = "ASC";
-        };
-        "query"         = "query O365UserList(`$first: Int!, `$after: String, `$id: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
-            o365Org(fid: `$id) {
-                id
-                childConnection(first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder, after: `$after) {
-                    edges {
-                        node {
-                            id
-                            name
-                            emailAddress
-                            effectiveSlaDomain {
-                                name
-                            }
-                            slaAssignment
-                        }
-                    }
-                    pageInfo {
-                        endCursor
-                        hasNextPage
-                        hasPreviousPage
-                    }
-                }
-            }
-        }"
+        }
     }
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    $node_array += $response.data.o365Org.childConnection.edges.node
+    $node_array += $response.data.o365Mailboxes.edges
     # get all pages of results
-    while ($response.data.o365Org.childConnection.pageInfo.hasNextPage) {
-        $payload.variables.after = $response.data.o365Org.childConnection.pageInfo.endCursor
+    while ($response.data.o365Mailboxes.pageInfo.hasNextPage) {
+        $payload.variables.after = $response.data.o365Mailboxes.pageInfo.endCursor
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-        $node_array += $response.data.o365Org.childConnection.edges.node
+        $node_array += $response.data.o365Mailboxes.edges
     }
 
-    $user_details = @()
+    $mailbox_details = @()
 
     foreach ($node in $node_array) {
-        $row = '' | Select-Object name, id, emailAddress, slaAssignment, effectiveSlaDomainName
-        $row.name = $node.name
-        $row.id = $node.id
-        $row.emailAddress = $node.emailAddress
-        $row.slaAssignment = $node.slaAssignment
-        $row.effectiveSlaDomainName = $node.effectiveSlaDomain.name
-        $user_details += $row
+        $row = '' | Select-Object name, id, userPrincipalName, slaAssignment, effectiveSlaDomainName
+        $row.name = $node.node.name
+        $row.id = $node.node.id
+        $row.userPrincipalName = $node.node.userPrincipalName
+        $row.slaAssignment = $node.node.slaAssignment
+        $row.effectiveSlaDomainName = $node.node.effectiveSlaDomain.name
+        $mailbox_details += $row
     }
 
-    return $user_details
+    return $mailbox_details
 }
 
 function Set-PolarisO365ObjectSla() {

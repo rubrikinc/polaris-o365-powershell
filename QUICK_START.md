@@ -42,8 +42,8 @@ The following commands are available in the module:
 * `Get-PolarisToken`
 * `Get-PolarisSLA`
 * `Get-PolarisO365Subscriptions`
-* `Get-PolarisO365Users`
-* `Get-PolarisO365User`
+* `Get-PolarisO365Mailboxes`
+* `Get-PolarisO365Mailbox`
 * `Set-PolarisO365ObjectSla`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
@@ -72,11 +72,11 @@ $my_sub = $all_subs | ?{$_.name -eq $sub_name}
 # get our SLA domain
 $my_sla = Get-PolarisSLA -Token $token -PolarisURL $url -Name $sla_name
 
-# get our user
-$my_user = Get-PolarisO365User -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
+# get our mailbox user
+$my_mailbox = Get-PolarisO365Mailbox -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
 
-# set the SLA domain for our user
-Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SLAID $my_sla.id
+# set the SLA domain for our mailbox user
+Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SLAID $my_sla.id
 
 # or set the SLA domain of our subscription
 Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_sub.id -SLAID $my_sla.id
@@ -92,15 +92,15 @@ $all_orgs = Get-PolarisO365Subscriptions -Token $token -PolarisURL $url
 $my_org = $all_orgs | ?{$_.name -eq $org_name}
 $all_slas = Get-PolarisSLA -Token $token -PolarisURL $url
 $my_sla = $all_slas | ?{$_.name -eq 'Gold'}
-$all_users = Get-PolarisO365Users -Token $token -PolarisURL $url -SubscriptionId $my_org.id
-$500_users = $all_users | select -First 500
-$assign = Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $500_users.id -SlaID $my_sla.id
+$all_mailboxes = Get-PolarisO365Mailboxes -Token $token -PolarisURL $url -SubscriptionId $my_org.id
+$500_mailboxes = $all_mailboxes | select -First 500
+$assign = Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $500_mailboxes.id -SlaID $my_sla.id
 ```
 
 The key line here is this:
 
 ```powershell
-$500_users = $all_users | select -First 500
+$500_mailboxes = $all_mailboxes | select -First 500
 ```
 
-Here we are just picking the first 500 accounts, but more specific selection could be achieved using standard PowerShell filtering on the `$all_users` array.
+Here we are just picking the first 500 accounts, but more specific selection could be achieved using standard PowerShell filtering on the `$all_mailboxes` array.
