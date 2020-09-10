@@ -44,6 +44,8 @@ The following commands are available in the module:
 * `Get-PolarisO365Subscriptions`
 * `Get-PolarisO365Mailboxes`
 * `Get-PolarisO365Mailbox`
+* `Get-PolarisO365OneDrives`
+* `Get-PolarisO365OneDrive`
 * `Set-PolarisO365ObjectSla`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
@@ -75,8 +77,14 @@ $my_sla = Get-PolarisSLA -Token $token -PolarisURL $url -Name $sla_name
 # get our mailbox user
 $my_mailbox = Get-PolarisO365Mailbox -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
 
+# get our onedrive user
+$my_onedrive = Get-PolarisO365OneDrive -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
+
 # set the SLA domain for our mailbox user
 Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SLAID $my_sla.id
+
+# set the SLA domain for our onedrive
+Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_onedrive.id -SLAID $my_sla.id
 
 # or set the SLA domain of our subscription
 Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_sub.id -SLAID $my_sla.id
