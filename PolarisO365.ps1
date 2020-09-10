@@ -771,11 +771,11 @@ function Set-PolarisO365ObjectSla() {
     <#
     .SYNOPSIS
 
-    Sets the SLA Domain for a selected Office 365 object (user or subscription).
+    Sets the SLA Domain for a selected Office 365 object (mailbox, onedrive or subscription).
 
     .DESCRIPTION
 
-    Sets the protection for an O365 user or subscription in a given Polaris instance, taking
+    Sets the protection for an O365 mailbox, onedrive or subscription in a given Polaris instance, taking
     an API token, Polaris URL, object ID, and SLA ID.
 
     .PARAMETER Token
@@ -785,8 +785,8 @@ function Set-PolarisO365ObjectSla() {
     The URL for the Polaris instance in the form 'https://myurl'
 
     .PARAMETER ObjectID
-    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisO365User',
-    'Get-PolarisO365Users', or 'Get-PolarisO365Subscriptions' commands. This can take an array of object IDs.
+    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisO365Mailbox', 'Get-PolarisO365OneDrive',
+    'Get-PolarisO365Mailboxes', 'Get-PolarisO365OneDrives', or 'Get-PolarisO365Subscriptions' commands. This can take an array of object IDs.
 
     .PARAMETER SlaID
     The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command. Use the string
@@ -804,12 +804,12 @@ function Set-PolarisO365ObjectSla() {
 
     .EXAMPLE
 
-    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID $my_sla.id
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SlaID $my_sla.id
     Success
 
     .EXAMPLE
 
-    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_user.id -SlaID 'DONOTPROTECT'
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_onedrive.id -SlaID 'DONOTPROTECT'
     Success
 
     .EXAMPLE
