@@ -767,6 +767,229 @@ function Get-PolarisO365OneDrive() {
     return $user_details
 }
 
+function Get-PolarisO365SharePoint() {
+    <#
+    .SYNOPSIS
+    Returns a filtered list of O365 SharePoint sites and/or document libraries for a given subscription in a given Polaris instance.
+    .DESCRIPTION
+    Returns a filtered list of Office 365 SharePoint sites and/or document libraries from a given subscription and Polaris instance, taking
+    an API token, Polaris URL, subscription ID, and search string.
+    .PARAMETER Token
+    Polaris API Token.
+    .PARAMETER PolarisURL
+    The URL for the Polaris instance in the form 'https://myurl'
+    .PARAMETER SubscriptionID
+    The Polaris subscription ID for a given O365 subscription. Can be obtained with the
+    'Get-PolarisO365Subscriptions' command.
+    .PARAMETER SearchString
+    Search string, used to filter site or drive name.
+    .PARAMETER Includes
+    It indidates if the returned object includes only SharePoint sites, drives or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly', 'Both'.
+    .INPUTS
+    None. You cannot pipe objects to Get-PolarisO365SharePoint.
+    .OUTPUTS
+    System.Object. Get-PolarisO365SharePoint returns an array containing the ID, Name,
+    email address, and SLA details for the returned O365 OneDrive users.
+    .EXAMPLE
+    PS> Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    name                   : Milan Kundera
+    id                     : 12341234-1234-1234-abcd-123456789012
+    slaAssignment          : Direct
+    effectiveSlaDomainName : Gold
+    #>
+
+    param(
+        [Parameter(Mandatory=$True)]
+        [String]$Token,
+        [Parameter(Mandatory=$True)]
+        [String]$PolarisURL,
+        [Parameter(Mandatory=$True)]
+        [String]$SubscriptionId,
+        [Parameter(Mandatory=$false)]
+        [String]$SearchString,
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("SitesOnly", "DocumentLibrariesOnly", "Both")]
+        [String]$Includes
+    )
+
+    $headers = @{
+        'Content-Type' = 'application/json';
+        'Accept' = 'application/json';
+        'Authorization' = $('Bearer '+$Token);
+    }
+
+    $endpoint = $PolarisURL + '/api/graphql'
+
+    # get users
+
+    $node_array = @()
+
+    $payload = @{
+        "operationName" = "O365SharepointObjectQuery";
+        "query" = "query O365SharepointObjectQuery(`$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            o365SharepointObjects(after: `$after, fid: `$orgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+                edges {
+                    node {
+                        objectId
+                        parentId
+                        title
+                        ... on O365Site {
+                            logicalPath {
+                                fid
+                                name
+                            }
+                            effectiveSlaDomain {
+                                id
+                                name
+                                ... on ClusterSlaDomain {
+                                    cluster {
+                                        id
+                                        name
+                                    }
+                                }
+                            }
+                            objectType
+                            slaAssignment
+                        }
+                        ... on O365SharepointDrive {
+                            logicalPath {
+                                fid
+                                name
+                            }
+                            effectiveSlaDomain {
+                                id
+                                name
+                                ... on ClusterSlaDomain {
+                                    cluster {
+                                        id
+                                        name
+                                    }
+                                }
+                            }
+                            objectType
+                            slaAssignment
+                        }
+                    }
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                    hasPreviousPage
+                }
+            }
+        }";
+        "variables"     = @{
+            "after"     = $null;
+            "filter"    = @(
+                @{
+                    "field" = "NAME";
+                    "texts" = @($SearchString);
+                }
+           )
+            "first"     = 100;
+            "orgId"     = $SubscriptionId;
+            "sortBy"    = "NAME";
+            "sortOrder" = "ASC";
+        }
+    }
+
+    if ($Includes -eq "SitesOnly") {
+        $payload.query = "query O365SharepointObjectQuery(`$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            o365SharepointObjects(after: `$after, fid: `$orgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+                edges {
+                    node {
+                        objectId
+                        parentId
+                        title
+                        ... on O365Site {
+                            logicalPath {
+                                fid
+                                name
+                            }
+                            effectiveSlaDomain {
+                                id
+                                name
+                                ... on ClusterSlaDomain {
+                                    cluster {
+                                        id
+                                        name
+                                    }
+                                }
+                            }
+                            objectType
+                            slaAssignment
+                        }
+                    }
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                    hasPreviousPage
+                }
+            }
+        }"
+    }
+
+    if ($Includes -eq "DocumentLibrariesOnly") {
+        $payload.query = "query O365SharepointObjectQuery(`$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            o365SharepointObjects(after: `$after, fid: `$orgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+                edges {
+                    node {
+                        objectId
+                        parentId
+                        title
+                        ... on O365SharepointDrive {
+                            logicalPath {
+                                fid
+                                name
+                            }
+                            effectiveSlaDomain {
+                                id
+                                name
+                                ... on ClusterSlaDomain {
+                                    cluster {
+                                        id
+                                        name
+                                    }
+                                }
+                            }
+                            objectType
+                            slaAssignment
+                        }
+                    }
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                    hasPreviousPage
+                }
+            }
+        }"
+    }
+
+    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+    $node_array += $response.data.o365SharepointObjects.edges
+    # get all pages of results
+    while ($response.data.o365SharepointObjects.pageInfo.hasNextPage) {
+        $payload.variables.after = $response.data.o365SharepointObjects.pageInfo.endCursor
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        $node_array += $response.data.o365SharepointObjects.edges
+    }
+
+    $sharepoint_details = @()
+
+    foreach ($node in $node_array) {
+        $row = '' | Select-Object name,id,slaAssignment,effectiveSlaDomainName
+        $row.name = $node.node.title
+        $row.id = $node.node.objectId
+        $row.slaAssignment = $node.node.slaAssignment
+        $row.effectiveSlaDomainName = $node.node.effectiveSlaDomain.name
+        $sharepoint_details += $row
+    }
+
+    return $sharepoint_details
+}
+
 function Set-PolarisO365ObjectSla() {
     <#
     .SYNOPSIS
