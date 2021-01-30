@@ -789,7 +789,7 @@ function Get-PolarisO365SharePoint() {
     None. You cannot pipe objects to Get-PolarisO365SharePoint.
     .OUTPUTS
     System.Object. Get-PolarisO365SharePoint returns an array containing the ID, Name,
-    email address, and SLA details for the returned O365 OneDrive users.
+    and SLA details for the returned O365 SharePoint sites and/or document libraries.
     .EXAMPLE
     PS> Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
     name                   : Milan Kundera
