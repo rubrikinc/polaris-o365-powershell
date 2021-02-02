@@ -778,22 +778,23 @@ function Get-PolarisO365SharePoint() {
     Polaris API Token.
     .PARAMETER PolarisURL
     The URL for the Polaris instance in the form 'https://myurl'
-    .PARAMETER SubscriptionID
+    .PARAMETER SubscriptionId
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
     'Get-PolarisO365Subscriptions' command.
     .PARAMETER SearchString
-    Search string, used to filter site or drive name.
+    Search string, used to filter site or document library name.
     .PARAMETER Includes
-    It indidates if the returned object includes only SharePoint sites, drives or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly', 'Both'.
+    It indidates if the returned object includes only SharePoint sites, document libraries or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly' or 'Both'.
     .INPUTS
     None. You cannot pipe objects to Get-PolarisO365SharePoint.
     .OUTPUTS
     System.Object. Get-PolarisO365SharePoint returns an array containing the ID, Name,
     and SLA details for the returned O365 SharePoint sites and/or document libraries.
     .EXAMPLE
-    PS> Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    PS> Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -Includes 'SitesOnly' -SearchString 'test'
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
+    type                   : O365Site
     slaAssignment          : Direct
     effectiveSlaDomainName : Gold
     #>
@@ -820,170 +821,130 @@ function Get-PolarisO365SharePoint() {
 
     $endpoint = $PolarisURL + '/api/graphql'
 
-    # get users
-
-    $node_array = @()
+    $o365Sites = $null
+    $o365SharepointDrives = $null
 
     $payload = @{
-        "operationName" = "O365SharepointObjectQuery";
-        "query" = "query O365SharepointObjectQuery(`$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
-            o365SharepointObjects(after: `$after, fid: `$orgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
-                edges {
-                    node {
-                        objectId
-                        parentId
-                        title
-                        ... on O365Site {
-                            logicalPath {
-                                fid
-                                name
-                            }
-                            effectiveSlaDomain {
-                                id
-                                name
-                                ... on ClusterSlaDomain {
-                                    cluster {
-                                        id
-                                        name
-                                    }
-                                }
-                            }
-                            objectType
-                            slaAssignment
-                        }
-                        ... on O365SharepointDrive {
-                            logicalPath {
-                                fid
-                                name
-                            }
-                            effectiveSlaDomain {
-                                id
-                                name
-                                ... on ClusterSlaDomain {
-                                    cluster {
-                                        id
-                                        name
-                                    }
-                                }
-                            }
-                            objectType
-                            slaAssignment
-                        }
-                    }
-                }
-                pageInfo {
-                    endCursor
-                    hasNextPage
-                    hasPreviousPage
-                }
-            }
-        }";
+        "query"         = "";
         "variables"     = @{
             "after"     = $null;
             "filter"    = @(
                 @{
-                    "field" = "NAME";
+                    "field" = "IS_RELIC";
+                    "texts" = @("false");
+                },
+                @{
+                    "field" = "NAME_OR_EMAIL_ADDRESS";
                     "texts" = @($SearchString);
                 }
-           )
+            );
             "first"     = 100;
-            "orgId"     = $SubscriptionId;
-            "sortBy"    = "NAME";
+            "o365OrgId" = $SubscriptionId;
+            "sortBy"    = "EMAIL_ADDRESS";
             "sortOrder" = "ASC";
         }
     }
 
+    $querySites = "o365Sites(after: `$after, o365OrgId: `$o365OrgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+        nodes {
+            id
+            name
+            parentId
+            title
+            url
+            hierarchyLevel
+            effectiveSlaDomain {
+                id
+                name
+            }
+            objectType
+            slaAssignment
+        }
+        pageInfo {
+            endCursor
+            hasNextPage
+            hasPreviousPage
+        }
+    }"
+
+    $queryDrives = "o365SharepointDrives(after: `$after, o365OrgId: `$o365OrgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+        nodes {
+            id
+            naturalId
+            name
+            parentId
+            totalStorageInBytes
+            usedStorageInBytes
+            effectiveSlaDomain {
+                id
+                name
+            }
+            objectType
+            slaAssignment
+            onDemandSnapshotCount
+        }
+        pageInfo {
+            endCursor
+            hasNextPage
+            hasPreviousPage
+        }
+    }"
+
     if ($Includes -eq "SitesOnly") {
-        $payload.query = "query O365SharepointObjectQuery(`$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
-            o365SharepointObjects(after: `$after, fid: `$orgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
-                edges {
-                    node {
-                        objectId
-                        parentId
-                        title
-                        ... on O365Site {
-                            logicalPath {
-                                fid
-                                name
-                            }
-                            effectiveSlaDomain {
-                                id
-                                name
-                                ... on ClusterSlaDomain {
-                                    cluster {
-                                        id
-                                        name
-                                    }
-                                }
-                            }
-                            objectType
-                            slaAssignment
-                        }
-                    }
-                }
-                pageInfo {
-                    endCursor
-                    hasNextPage
-                    hasPreviousPage
-                }
-            }
+        $payload.query = "query O365SharepointObjectQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            $($querySites)
         }"
-    }
-
-    if ($Includes -eq "DocumentLibrariesOnly") {
-        $payload.query = "query O365SharepointObjectQuery(`$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
-            o365SharepointObjects(after: `$after, fid: `$orgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
-                edges {
-                    node {
-                        objectId
-                        parentId
-                        title
-                        ... on O365SharepointDrive {
-                            logicalPath {
-                                fid
-                                name
-                            }
-                            effectiveSlaDomain {
-                                id
-                                name
-                                ... on ClusterSlaDomain {
-                                    cluster {
-                                        id
-                                        name
-                                    }
-                                }
-                            }
-                            objectType
-                            slaAssignment
-                        }
-                    }
-                }
-                pageInfo {
-                    endCursor
-                    hasNextPage
-                    hasPreviousPage
-                }
-            }
-        }"
-    }
-
-    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    $node_array += $response.data.o365SharepointObjects.edges
-    # get all pages of results
-    while ($response.data.o365SharepointObjects.pageInfo.hasNextPage) {
-        $payload.variables.after = $response.data.o365SharepointObjects.pageInfo.endCursor
+ 
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-        $node_array += $response.data.o365SharepointObjects.edges
+        $o365Sites = $response.data.o365Sites
+    } elseif ($Includes -eq "DocumentLibrariesOnly") {
+        $payload.query = "query o365SharepointDrives(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            $($queryDrives)
+        }"
+
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        $o365SharepointDrives = $response.data.o365SharepointDrives
+    } else {
+        $payload.query = "query o365SharepointDrives(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            $($querySites)
+            $($queryDrives)
+        }"
+
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        $o365Sites = $response.data.o365Sites
+        $o365SharepointDrives = $response.data.o365SharepointDrives
+     }
+
+     $node_array += @()
+     $sharepoint_details = @()
+
+     if ($null -ne $o365Sites) {
+        $node_array += $o365Sites.nodes
+        while ($o365Sites.pageInfo.hasNextPage) {
+            $payload.variables.after = $o365Sites.pageInfo.endCursor
+            $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+            $o365Sites = $response.data.o365Sites
+            $node_array += $o365Sites.nodes
+        }
     }
 
-    $sharepoint_details = @()
+    if ($null -ne $o365SharepointDrives) {
+        $node_array += $o365SharepointDrives.nodes
+        while ($o365SharepointDrives.pageInfo.hasNextPage) {
+            $payload.variables.after = $o365SharepointDrives.pageInfo.endCursor
+            $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+            $o365SharepointDrives = $response.data.o365SharepointDrives
+            $node_array += $o365SharepointDrives.nodes
+        }
+    }
 
     foreach ($node in $node_array) {
-        $row = '' | Select-Object name,id,slaAssignment,effectiveSlaDomainName
-        $row.name = $node.node.title
-        $row.id = $node.node.objectId
-        $row.slaAssignment = $node.node.slaAssignment
-        $row.effectiveSlaDomainName = $node.node.effectiveSlaDomain.name
+        $row = '' | Select-Object name,id,type,slaAssignment,effectiveSlaDomainName
+        $row.name = $node.name
+        $row.id = $node.id
+        $row.type = $node.objectType
+        $row.slaAssignment = $node.slaAssignment
+        $row.effectiveSlaDomainName = $node.effectiveSlaDomain.name
         $sharepoint_details += $row
     }
 
