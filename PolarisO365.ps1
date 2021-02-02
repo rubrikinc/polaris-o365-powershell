@@ -784,7 +784,8 @@ function Get-PolarisO365SharePoint() {
     .PARAMETER SearchString
     Search string, used to filter site or document library name.
     .PARAMETER Includes
-    It indidates if the returned object includes only SharePoint sites, document libraries or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly' or 'Both'.
+    It indidates if the returned object includes only SharePoint sites, document libraries or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly'.
+    if it's not specified, it returns both sites and document libraries by default.
     .INPUTS
     None. You cannot pipe objects to Get-PolarisO365SharePoint.
     .OUTPUTS
@@ -809,7 +810,7 @@ function Get-PolarisO365SharePoint() {
         [Parameter(Mandatory=$false)]
         [String]$SearchString,
         [Parameter(Mandatory=$false)]
-        [ValidateSet("SitesOnly", "DocumentLibrariesOnly", "Both")]
+        [ValidateSet("SitesOnly", "DocumentLibrariesOnly")]
         [String]$Includes
     )
 
@@ -840,8 +841,6 @@ function Get-PolarisO365SharePoint() {
             );
             "first"     = 100;
             "o365OrgId" = $SubscriptionId;
-            "sortBy"    = "EMAIL_ADDRESS";
-            "sortOrder" = "ASC";
         }
     }
 

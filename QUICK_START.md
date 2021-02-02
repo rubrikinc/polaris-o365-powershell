@@ -82,7 +82,13 @@ $my_mailbox = Get-PolarisO365Mailbox -Token $token -PolarisURL $url -Subscriptio
 $my_onedrive = Get-PolarisO365OneDrive -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
 
 # get our SharePoint sites
-$my_sharepoint = Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif' - Includes 'SitesOnly'
+$my_sharepoint_sites = Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif' - Includes 'SitesOnly'
+
+# get our SharePoint document libraries
+$my_sharepoint_libraries = Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif' - Includes 'DocumentLibrariesOnly'
+
+# get our SharePoint sites and document libraries
+$my_sharepoint_both = Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'arif'
 
 # set the SLA domain for our mailbox user
 Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SLAID $my_sla.id
