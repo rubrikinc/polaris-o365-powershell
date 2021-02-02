@@ -891,21 +891,21 @@ function Get-PolarisO365SharePoint() {
     }"
 
     if ($Includes -eq "SitesOnly") {
-        $payload.query = "query O365SharepointObjectQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        $payload.query = "query O365SharepointQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
             $($querySites)
         }"
  
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         $o365Sites = $response.data.o365Sites
     } elseif ($Includes -eq "DocumentLibrariesOnly") {
-        $payload.query = "query o365SharepointDrives(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        $payload.query = "query O365SharepointQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
             $($queryDrives)
         }"
 
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         $o365SharepointDrives = $response.data.o365SharepointDrives
     } else {
-        $payload.query = "query o365SharepointDrives(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        $payload.query = "query O365SharepointQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
             $($querySites)
             $($queryDrives)
         }"
