@@ -46,6 +46,8 @@ function Get-PolarisToken() {
         "username" = $Username;
         "password" = $Password;
     }
+    # Replace com/ with com to prevent 404 error
+    $PolarisURL = $PolarisURL -replace '(.*?)com/(.*)', '$1com$2' 
     $endpoint = $PolarisURL + '/api/session'
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     return $response.access_token
