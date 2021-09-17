@@ -113,6 +113,11 @@ $my_sla = $all_slas | ?{$_.name -eq 'Gold'}
 $all_mailboxes = Get-PolarisO365Mailboxes -Token $token -PolarisURL $url -SubscriptionId $my_org.id
 $500_mailboxes = $all_mailboxes | select -First 500
 $assign = Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $500_mailboxes.id -SlaID $my_sla.id
+
+# Can filter using - Includes 'SitesOnly'/'DocumentLibrariesOnly'
+$all_sharepoint_objects = Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_org.id
+$500_sharepoint_objects = $all_sharepoint_objects | select -First 500
+$assign_sharepoint = Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $500_sharepoint_objects.id -SlaID $my_sla.id
 ```
 
 The key line here is this:
