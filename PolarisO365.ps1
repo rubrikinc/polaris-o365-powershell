@@ -78,14 +78,9 @@ function Get-PolarisTokenServiceAccount() {
 
 
     try {
-
         $serviceAccountFile = Get-Content -Path "~/.rubrik/polaris-service-account.json" -ErrorAction Stop | ConvertFrom-Json 
-
-
     }
     catch {
-
-
         $errorMessage = $_.Exception | Out-String
 
         if($errorMessage.Contains('because it does not exist')) {
@@ -113,11 +108,9 @@ function Get-PolarisTokenServiceAccount() {
     }
 
     if ($serviceAccountFile.access_token_uri -eq $null) {
-        Write-Output "Errro"
         $missingServiceAccount += "'access_token_uri'"
     }
 
-    Write-Output $missingServiceAccount
 
     if ($missingServiceAccount.count -gt 0){
         throw "The Service Account JSON secret file is missing the required paramaters: $missingServiceAccount"
