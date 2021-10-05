@@ -39,6 +39,7 @@ This token can then be used with the other commands in the module.
 
 The following commands are available in the module:
 
+* `Get-PolarisTokenServiceAccount`
 * `Get-PolarisToken`
 * `Get-PolarisSLA`
 * `Get-PolarisO365Subscriptions`
@@ -48,6 +49,11 @@ The following commands are available in the module:
 * `Get-PolarisO365OneDrive`
 * `Get-PolarisO365SharePoint`
 * `Set-PolarisO365ObjectSla`
+* `Get-PolarisO365OneDrives`
+* `Get-PolarisO365OneDriveSnapshot`
+* `Restore-PolarisO365OneDrive`
+* `Get-PolarisJob`
+* `Get-PolarisO365EnterpriseApplication`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
 
