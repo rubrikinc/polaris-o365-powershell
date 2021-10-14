@@ -627,7 +627,7 @@ function Get-PolarisO365OneDriveSnapshot() {
 
     param(
         [Parameter(Mandatory=$True)]
-        [String]$Token
+        [String]$Token,
         [Parameter(Mandatory=$True)]
         [String]$OneDriveId,
         [Parameter(Mandatory=$True)]
@@ -1480,7 +1480,7 @@ function Get-PolarisO365EnterpriseApplication() {
         [Parameter(Mandatory = $True)]
         [String]$Token,
         [Parameter(Mandatory = $True)]
-        [String]$PolarisURL,
+        [String]$PolarisURL
     )
 
     $headers = @{
