@@ -1552,6 +1552,262 @@ function Get-PolarisO365EnterpriseApplication() {
     return $appArray 
 }
 
+function Get-PolarisO365EnterpriseApplication() {
+    <#
+    .SYNOPSIS
+
+    Returns the Enterprise Applications configured on the Polaris Account.
+
+    .DESCRIPTION
+
+    Returns an array for each Enterprise Application configured on the Polaris
+    account
+
+    .PARAMETER Token
+    Polaris access token, get this using the 'Get-PolarisTokenServiceAccount' or 'Get-PolarisToken' command.
+
+    .PARAMETER PolarisURL
+    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
+.
+
+    .INPUTS
+
+    None. You cannot pipe objects to Get-PolarisO365EnterpriseApplication.
+
+    .OUTPUTS
+
+    System.Object. Get-PolarisO365EnterpriseApplication returns an array 
+    containing the appId, subscription, appType, addedAt, appOwner, and
+    isAuthenticated for each Microsoft 365 Enterprise Application connected
+    to Rubrik.
+
+    .EXAMPLE
+
+    PS> Get-PolarisO365EnterpriseApplication -Token $token -PolarisURL $url
+    appId           : 72d1998d-15dc-4388-80de-8731e59aab89
+    subscription    : Rubrik Demo
+    appType         : TEAMS
+    addedAt         : 8/17/2021 1:31:51 PM
+    appOwner        : RUBRIK_SAAS
+    isAuthenticated : True
+    #>
+
+    param(
+        [Parameter(Mandatory = $True)]
+        [String]$Token,
+        [Parameter(Mandatory = $True)]
+        [String]$PolarisURL
+    )
+
+    $headers = @{
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
+    }
+
+    $endpoint = $PolarisURL + '/api/graphql'
+
+
+
+    $payload = @{
+        "operationName" = "ListO365Apps";
+        "variables"     = @{
+            "first"  = 40;
+            "o365AppFilters" = @();
+        };
+        "query"         = "query ListO365Apps(`$first: Int!, `$after: String, `$o365AppFilters: [AppFilter!]!, `$o365AppSortByParam: AppSortByParam) {
+            listO365Apps(first: `$first, after: `$after, o365AppFilters: `$o365AppFilters, o365AppSortByParam: `$o365AppSortByParam) {
+              edges {
+                node {
+                  appId
+                  subscription
+                  appType
+                  addedAt
+                  appOwner
+                  isAuthenticated
+                }
+              }
+              pageInfo {
+                endCursor
+                hasNextPage
+                hasPreviousPage
+                
+              }
+            }
+          }"
+    }
+
+    $node_array = @()
+
+
+    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+    $node_array += $response.data.listO365Apps.edges
+
+    # get all pages of results
+    while ($response.data.listO365Apps.pageInfo.hasNextPage) {
+        $payload.variables.after = $response.data.listO365Apps.pageInfo.endCursor
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        $node_array += $response.data.listO365Apps.edges
+    }
+
+    $appArray = @()
+    foreach ($app in $node_array) {
+        $app = $app.node
+
+        $row = '' | Select-Object appId,subscription,appType,addedAt,appOwner,isAuthenticated
+        $row.appId = $app.appId;
+        $row.subscription = $app.subscription;
+        $row.appType = $app.appType;
+        $row.addedAt = $app.addedAt;
+        $row.appOwner = $app.appOwner;
+        $row.isAuthenticated = $app.isAuthenticated;
+        
+        $appArray += $row
+    }
+
+    return $appArray 
+}
+
+function New-M365EnterpriseApplication() {
+    <#
+    .SYNOPSIS
+
+    Returns the Enterprise Applications configured on the Polaris Account.
+
+    .DESCRIPTION
+
+    Returns an array for each Enterprise Application configured on the Polaris
+    account
+
+    .PARAMETER Token
+    Polaris access token, get this using the 'Get-PolarisTokenServiceAccount' or 'Get-PolarisToken' command.
+
+    .PARAMETER PolarisURL
+    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
+.
+
+    .INPUTS
+
+    None. You cannot pipe objects to Get-PolarisO365EnterpriseApplication.
+
+    .OUTPUTS
+
+    System.Object. Get-PolarisO365EnterpriseApplication returns an array 
+    containing the appId, subscription, appType, addedAt, appOwner, and
+    isAuthenticated for each Microsoft 365 Enterprise Application connected
+    to Rubrik.
+
+    .EXAMPLE
+
+    PS> Get-PolarisO365EnterpriseApplication -Token $token -PolarisURL $url
+    appId           : 72d1998d-15dc-4388-80de-8731e59aab89
+    subscription    : Rubrik Demo
+    appType         : TEAMS
+    addedAt         : 8/17/2021 1:31:51 PM
+    appOwner        : RUBRIK_SAAS
+    isAuthenticated : True
+    #>
+
+    # param(
+    #     [Parameter(Mandatory = $True)]
+    #     [String]$Token,
+    #     [Parameter(Mandatory = $True)]
+    #     [String]$PolarisURL
+    # )
+
+    Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" | Out-Null
+
+    # Connect-MgGraph -Scopes ("User.ReadBasic.All Application.ReadWrite.All " `
+    #                     + "DelegatedPermissionGrant.ReadWrite.All " `
+    #                     + "AppRoleAssignment.ReadWrite.All")
+
+    # Select-MgProfile -Name "beta"
+    
+    # Static Variables
+    
+    $polarisAccountName = "rubrik-se"
+    $exchangeAppName = "Rubrik Exchange 02 - $($polarisAccountName)"
+    
+    $grapApiResourceId = "00000003-0000-0000-c000-000000000000"
+    $ewsApiResourceId = "00000002-0000-0ff1-ce00-000000000000"
+
+    # $exchangeGraphPermissions = 'Mail.ReadWrite Group.Read.All Contacts.ReadWrite Calendars.ReadWrite User.Read.All Reports.Read.All'
+    # $exchangeEwsPermissions = 'User.Read.All full_access_as_app Mail.ReadWrite Contacts.ReadWrite Calendars.ReadWrite.All Tasks.ReadWrite'
+    # $exchangeAllPermissions = $exchangeGraphPermissions + $exchangeEwsPermissions
+
+
+    # Convert the human readable API permission values to their GUID identifier which is required
+    # when creating the Enterprise Application
+    # $exchangeApiPermissionId = $exchangeGraphPermissions + $exchangeEwsPermissions| Find-MgGraphPermission -ExactMatch -PermissionType Application
+
+    # GUID identifier which is required for New-MgApplication
+
+    # Mail.ReadWrite, Group.ReadAll, Contacts.ReadWrite, Calendars.ReadWrite, User.Read.All, Reports.Read.All
+    $exchangeGraphPermissionsGuid = 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '5b567255-7703-4780-807c-7be8301ae99b', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', 'df021288-bdef-4463-88db-98f22de89214', '230c1aed-a721-4c5d-9cb4-a90514e508ef'
+    # User.Read.All, full_access_as_app, Mail.ReadWrite, Contacts.ReadWrite, Calendars.ReadWrite.All, Tasks.ReadWrite
+    $exchangeEwsPermissionsGuid = 'bf24470f-10c1-436d-8d53-7b997eb473be', 'dc890d15-9560-4a4c-9b7f-a736ec74ec40', 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', '2c6a42ca-0d4d-49ad-bc0e-21222c449a65'
+
+
+    # $exchangeGraphPermissionsRequired = foreach ( $permission in $exchangeGraphPermissionsGuid ) {
+    #     @{ Id = $permission; Type = 'Role' }
+    # }
+
+    # $exchangeEwsPermissionsRequired = foreach ( $permission in $exchangeEwsPermissionsGuid  ) {
+    #     @{ Id = $permission; Type = 'Role' }
+    # }
+
+    # $exchangeAllPermissionsRequired = @(
+    #     @{ResourceAppId=$grapApiResourceId; ResourceAccess=$exchangeGraphPermissionsRequired},
+    #     @{ResourceAppId=$ewsApiResourceId; ResourceAccess=$exchangeEwsPermissionsRequired}
+    # );
+
+    # $newApp = New-MgApplication -DisplayName $exchangeAppName -SignInAudience "AzureADMyOrg" -RequiredResourceAccess $exchangeAllPermissionsRequired
+    $newApp = New-MgApplication -DisplayName $exchangeAppName -SignInAudience "AzureADMyOrg"
+
+
+    $passwordcred = @{
+        "displayName" = $exchangeAppName
+    }
+
+    $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newApp.Id -PasswordCredential $passwordCred
+
+    $newServicePrincipal = New-MgServicePrincipal -AppId $newApp.AppId
+
+    $graphResourceSp = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiResourceId)'"
+    $graphResourceS2 = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiResourceId)'"
+    
+
+    $exchangeGraphPermissionsGuid = 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '5b567255-7703-4780-807c-7be8301ae99b', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', 'df021288-bdef-4463-88db-98f22de89214', '230c1aed-a721-4c5d-9cb4-a90514e508ef'
+
+    foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
+        New-MgServicePrincipalAppRoleAssignedTo `
+          -ServicePrincipalId $newServicePrincipal.Id `
+          -ResourceId $graphResourceSp.Id `
+          -PrincipalId $newServicePrincipal.Id `
+          -AppRoleId $iD | Out-Null
+
+    }
+
+    foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
+        New-MgServicePrincipalAppRoleAssignedTo `
+          -ServicePrincipalId $newServicePrincipal.Id `
+          -ResourceId $graphResourceS2.Id `
+          -PrincipalId $newServicePrincipal.Id `
+          -AppRoleId $iD | Out-Null
+
+    }
+   
+    Write-Output $newApp.AppId
+    Write-Output $addPasswordToApp.SecretText
+    # Write-Output $newServicePrincipal
+    Write-Output ""
+    # Write-Output $addOauthPermissions
+    # Write-Output $addOauthPermission2
+}
+
+#AppId = 833216c0-8b33-4b95-82fb-5743b2f5db0d
+#Sercet = j2W7Q~ouDx_3zNfAFWYQY_80Scz6j67m0aCCJ
+
 
 
 
