@@ -1715,58 +1715,121 @@ function New-M365EnterpriseApplication() {
     #     [String]$PolarisURL
     # )
 
+    param(
+        [Parameter(Mandatory = $True)]
+        [ValidateSet("Exchange", "SharePoint", "OneDrive")]
+        [String]$DataSource
+    )
+
     Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" | Out-Null
     
     $polarisAccountName = "rubrik-se"
-    $exchangeAppName = "Rubrik Exchange 02 $($polarisAccountName)"
+
+    $applicationName = @{
+        "Exchange"  = "Rubrik Exchange - " + $($polarisAccountName)
+        "OneDrive" = "Rubrik OneDrive - $($polarisAccountName)"
+        "SharePoint" = "Rubrik SharePoint - $($polarisAccountName)"
+    }
+
+    $passwordcred = @{
+        "displayName" = $applicationName[$DataSource]
+    }
+
     
     # API Service Principal IDs
     $grapApiAppId = "00000003-0000-0000-c000-000000000000"
     $ewsApiAppId = "00000002-0000-0ff1-ce00-000000000000"
+    $sharePointApiAppId = "00000003-0000-0ff1-ce00-000000000000"
+  
+    # Microsoft Teams can only be added through the Rubrik UI due
+    # to API limitations from Microsoft. Keeping this in place for future
+    # proofing
+    # $teamsPointApiAppId = $sharePointApiAppId
 
-    # GUID identifier which is required for New-MgApplication
-
+    # GUID identifiers which is required for New-MgApplication
     # Mail.ReadWrite, Group.ReadAll, Contacts.ReadWrite, Calendars.ReadWrite, User.Read.All, Reports.Read.All
     $exchangeGraphPermissionsGuid = 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '5b567255-7703-4780-807c-7be8301ae99b', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', 'df021288-bdef-4463-88db-98f22de89214', '230c1aed-a721-4c5d-9cb4-a90514e508ef'
     # User.Read.All, full_access_as_app, Mail.ReadWrite, Contacts.ReadWrite, Calendars.ReadWrite.All, Tasks.ReadWrite
     $exchangeEwsPermissionsGuid = 'bf24470f-10c1-436d-8d53-7b997eb473be', 'dc890d15-9560-4a4c-9b7f-a736ec74ec40', 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', '2c6a42ca-0d4d-49ad-bc0e-21222c449a65'
+    # Sites.Read.All, Sites.ReadWrite.All, User.Read.All
+    $oneDriveGraphPermissionsGuid = '332a536c-c7ef-4017-ab91-336970924f0d', '9492366f-7969-46a4-8d15-ed1a20078fff', 'df021288-bdef-4463-88db-98f22de89214'
+    # Same permissions as OneDrive + Sites.FullControl.All
+    $sharePointGraphPermissionGuid = $oneDriveGraphPermissionsGuid + 'a82116e5-55eb-4c41-a434-62fe8a61c773'
+    # Sites.FullControl.All
+    $sharePointSpointPermissionGuid = '678536fe-1083-478a-9c59-b99265e6b0d3'
 
-    $passwordcred = @{
-        "displayName" = $exchangeAppName
-    }
     
-    $newEnterpriseApp = New-MgApplication -DisplayName $exchangeAppName -SignInAudience "AzureADMyOrg"
+    
+    
+    $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg"
     $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred
 
     $newServicePrincipal = New-MgServicePrincipal -AppId $newEnterpriseApp.AppId
 
     $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'"
-    $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'"
+    if ($DataSource -eq "Exchange") {
     
+        $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'"
 
+        foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
+            New-MgServicePrincipalAppRoleAssignedTo `
+            -ServicePrincipalId $newServicePrincipal.Id `
+            -ResourceId $graphApiServicePrincipal.Id `
+            -PrincipalId $newServicePrincipal.Id `
+            -AppRoleId $iD | Out-Null
 
-    foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
-        New-MgServicePrincipalAppRoleAssignedTo `
-          -ServicePrincipalId $newServicePrincipal.Id `
-          -ResourceId $graphApiServicePrincipal.Id `
-          -PrincipalId $newServicePrincipal.Id `
-          -AppRoleId $iD | Out-Null
+        }
+
+        foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
+            New-MgServicePrincipalAppRoleAssignedTo `
+            -ServicePrincipalId $newServicePrincipal.Id `
+            -ResourceId $ewsApiServicePrincipal.Id `
+            -PrincipalId $newServicePrincipal.Id `
+            -AppRoleId $iD | Out-Null
+        }
+
 
     }
+    elseif ($DataSource -eq "OneDrive") {
+        foreach ( $iD in $oneDriveGraphPermissionsGuid  ) {
+            New-MgServicePrincipalAppRoleAssignedTo `
+            -ServicePrincipalId $newServicePrincipal.Id `
+            -ResourceId $graphApiServicePrincipal.Id `
+            -PrincipalId $newServicePrincipal.Id `
+            -AppRoleId $iD | Out-Null
 
-    foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
-        New-MgServicePrincipalAppRoleAssignedTo `
-          -ServicePrincipalId $newServicePrincipal.Id `
-          -ResourceId $ewsApiServicePrincipal.Id `
-          -PrincipalId $newServicePrincipal.Id `
-          -AppRoleId $iD | Out-Null
-
+        }
     }
-   
-    Write-Output $newApp.AppId
-    Write-Output $addPasswordToApp.SecretText
+    elseif ($DataSource -eq "SharePoint") {
+
+        $sharePointApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($sharePointApiAppId)'"
+
+        foreach ( $iD in $sharePointGraphPermissionGuid  ) {
+            New-MgServicePrincipalAppRoleAssignedTo `
+              -ServicePrincipalId $newServicePrincipal.Id `
+              -ResourceId $graphApiServicePrincipal.Id `
+              -PrincipalId $newServicePrincipal.Id `
+              -AppRoleId $iD | Out-Null
+    
+        }
+
+        foreach ( $iD in $sharePointSpointPermissionGuid  ) {
+            New-MgServicePrincipalAppRoleAssignedTo `
+              -ServicePrincipalId $newServicePrincipal.Id `
+              -ResourceId $sharePointApiServicePrincipal.Id `
+              -PrincipalId $newServicePrincipal.Id `
+              -AppRoleId $iD | Out-Null
+    
+        }
+    }
+
+    return @{
+        "AppId" = $newEnterpriseApp.AppId
+        "Secret" = $addPasswordToApp.SecretText
+    }
     
 }
+
 
 function New-PolarisM365App() {
     <#
