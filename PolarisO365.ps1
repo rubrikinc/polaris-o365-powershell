@@ -1716,29 +1716,13 @@ function New-M365EnterpriseApplication() {
     # )
 
     Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" | Out-Null
-
-    # Connect-MgGraph -Scopes ("User.ReadBasic.All Application.ReadWrite.All " `
-    #                     + "DelegatedPermissionGrant.ReadWrite.All " `
-    #                     + "AppRoleAssignment.ReadWrite.All")
-
-    # Select-MgProfile -Name "beta"
-    
-    # Static Variables
     
     $polarisAccountName = "rubrik-se"
-    $exchangeAppName = "Rubrik Exchange 02 - $($polarisAccountName)"
+    $exchangeAppName = "Rubrik Exchange 02 $($polarisAccountName)"
     
-    $grapApiResourceId = "00000003-0000-0000-c000-000000000000"
-    $ewsApiResourceId = "00000002-0000-0ff1-ce00-000000000000"
-
-    # $exchangeGraphPermissions = 'Mail.ReadWrite Group.Read.All Contacts.ReadWrite Calendars.ReadWrite User.Read.All Reports.Read.All'
-    # $exchangeEwsPermissions = 'User.Read.All full_access_as_app Mail.ReadWrite Contacts.ReadWrite Calendars.ReadWrite.All Tasks.ReadWrite'
-    # $exchangeAllPermissions = $exchangeGraphPermissions + $exchangeEwsPermissions
-
-
-    # Convert the human readable API permission values to their GUID identifier which is required
-    # when creating the Enterprise Application
-    # $exchangeApiPermissionId = $exchangeGraphPermissions + $exchangeEwsPermissions| Find-MgGraphPermission -ExactMatch -PermissionType Application
+    # API Service Principal IDs
+    $grapApiAppId = "00000003-0000-0000-c000-000000000000"
+    $ewsApiAppId = "00000002-0000-0ff1-ce00-000000000000"
 
     # GUID identifier which is required for New-MgApplication
 
@@ -1747,42 +1731,24 @@ function New-M365EnterpriseApplication() {
     # User.Read.All, full_access_as_app, Mail.ReadWrite, Contacts.ReadWrite, Calendars.ReadWrite.All, Tasks.ReadWrite
     $exchangeEwsPermissionsGuid = 'bf24470f-10c1-436d-8d53-7b997eb473be', 'dc890d15-9560-4a4c-9b7f-a736ec74ec40', 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', '2c6a42ca-0d4d-49ad-bc0e-21222c449a65'
 
-
-    # $exchangeGraphPermissionsRequired = foreach ( $permission in $exchangeGraphPermissionsGuid ) {
-    #     @{ Id = $permission; Type = 'Role' }
-    # }
-
-    # $exchangeEwsPermissionsRequired = foreach ( $permission in $exchangeEwsPermissionsGuid  ) {
-    #     @{ Id = $permission; Type = 'Role' }
-    # }
-
-    # $exchangeAllPermissionsRequired = @(
-    #     @{ResourceAppId=$grapApiResourceId; ResourceAccess=$exchangeGraphPermissionsRequired},
-    #     @{ResourceAppId=$ewsApiResourceId; ResourceAccess=$exchangeEwsPermissionsRequired}
-    # );
-
-    # $newApp = New-MgApplication -DisplayName $exchangeAppName -SignInAudience "AzureADMyOrg" -RequiredResourceAccess $exchangeAllPermissionsRequired
-    $newApp = New-MgApplication -DisplayName $exchangeAppName -SignInAudience "AzureADMyOrg"
-
-
     $passwordcred = @{
         "displayName" = $exchangeAppName
     }
+    
+    $newEnterpriseApp = New-MgApplication -DisplayName $exchangeAppName -SignInAudience "AzureADMyOrg"
+    $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred
 
-    $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newApp.Id -PasswordCredential $passwordCred
+    $newServicePrincipal = New-MgServicePrincipal -AppId $newEnterpriseApp.AppId
 
-    $newServicePrincipal = New-MgServicePrincipal -AppId $newApp.AppId
-
-    $graphResourceSp = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiResourceId)'"
-    $graphResourceS2 = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiResourceId)'"
+    $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'"
+    $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'"
     
 
-    $exchangeGraphPermissionsGuid = 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '5b567255-7703-4780-807c-7be8301ae99b', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', 'df021288-bdef-4463-88db-98f22de89214', '230c1aed-a721-4c5d-9cb4-a90514e508ef'
 
     foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
         New-MgServicePrincipalAppRoleAssignedTo `
           -ServicePrincipalId $newServicePrincipal.Id `
-          -ResourceId $graphResourceSp.Id `
+          -ResourceId $graphApiServicePrincipal.Id `
           -PrincipalId $newServicePrincipal.Id `
           -AppRoleId $iD | Out-Null
 
@@ -1791,7 +1757,7 @@ function New-M365EnterpriseApplication() {
     foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
         New-MgServicePrincipalAppRoleAssignedTo `
           -ServicePrincipalId $newServicePrincipal.Id `
-          -ResourceId $graphResourceS2.Id `
+          -ResourceId $ewsApiServicePrincipal.Id `
           -PrincipalId $newServicePrincipal.Id `
           -AppRoleId $iD | Out-Null
 
@@ -1799,14 +1765,110 @@ function New-M365EnterpriseApplication() {
    
     Write-Output $newApp.AppId
     Write-Output $addPasswordToApp.SecretText
-    # Write-Output $newServicePrincipal
-    Write-Output ""
-    # Write-Output $addOauthPermissions
-    # Write-Output $addOauthPermission2
+    
 }
 
-#AppId = 833216c0-8b33-4b95-82fb-5743b2f5db0d
-#Sercet = j2W7Q~ouDx_3zNfAFWYQY_80Scz6j67m0aCCJ
+function New-PolarisM365App() {
+    <#
+    .SYNOPSIS
+
+    Create a new M365 subscription.
+
+    .DESCRIPTION
+
+    Create a new M365 subscription
+
+    .PARAMETER Token
+    Polaris API Token.
+
+    .PARAMETER PolarisURL
+    The URL for the Polaris instance in the form 'https://myurl'
+
+    .PARAMETER ObjectID
+    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisO365Mailbox', 'Get-PolarisO365OneDrive',
+    'Get-PolarisO365Mailboxes', 'Get-PolarisO365OneDrives', or 'Get-PolarisO365Subscriptions' commands. This can take an array of object IDs.
+
+    .PARAMETER SlaID
+    The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command. Use the string
+    'UNPROTECTED' to remove any SLA from this object, or the string 'DONOTPROTECT' to explicitly not protect
+    this or any child objects.
+
+    .INPUTS
+
+    TBD
+
+    .OUTPUTS
+
+    System.String. This returns the string 'Success' if the modification was successful, or throws an
+    error if the command is not successful.
+
+    .EXAMPLE
+
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SlaID $my_sla.id
+    Success
+
+    .EXAMPLE
+
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_onedrive.id -SlaID 'DONOTPROTECT'
+    Success
+
+    .EXAMPLE
+
+    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_subscription.id -SlaID 'UNPROTECTED'
+    Success
+    #>
+
+    param(
+        [Parameter(Mandatory = $True)]
+        [String]$Token,
+        [Parameter(Mandatory = $True)]
+        [String]$PolarisURL,
+        [Parameter(Mandatory = $True)]
+        [ValidateSet("EXCHANGE", "ONEDRIVE", "SPOINT", "TEAMS", IgnoreCase = $false)]
+        [String]$o365AppType,
+        [Parameter(Mandatory = $True)]
+        [String]$o365AppClientId,
+        [Parameter(Mandatory = $True)]
+        [String]$o365AppClientSecret,
+        [Parameter(Mandatory = $True)]
+        [String]$o365SubscriptionName
+    )
+
+    $headers = @{
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
+    }
+
+
+    $endpoint = $PolarisURL + '/api/graphql'
+
+    $payload = @{
+        "operationName" = "AddCustomerO365AppMutation";
+        "variables" = @{
+            "o365AppType" = $o365AppType;
+            "o365AppClientId" = $o365AppClientId;
+            "o365AppClientSecret" = $o365AppClientSecret;
+            "o365SubscriptionName" = $o365SubscriptionName;
+        };
+        "query" = "mutation AddCustomerO365AppMutation(`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!) {
+            insertCustomerO365App(o365AppType: `$o365AppType, o365AppClientId: `$o365AppClientId, o365AppClientSecret: `$o365AppClientSecret, o365SubscriptionName: `$o365SubscriptionName) {
+                success
+            }
+        }";
+    }
+
+    Write-Host $payload.query
+
+    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+    if ($response.data.insertCustomerO365App.success -eq $true) {
+        return 'Success'
+    }
+    else {
+        Write-Host $response
+        throw 'Issue adding application'
+    }
+}
 
 
 
