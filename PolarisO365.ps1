@@ -1608,7 +1608,6 @@ function Get-PolarisO365EnterpriseApplication() {
     $endpoint = $PolarisURL + '/api/graphql'
 
 
-
     $payload = @{
         "operationName" = "ListO365Apps";
         "variables"     = @{
@@ -1668,7 +1667,7 @@ function Get-PolarisO365EnterpriseApplication() {
     return $appArray 
 }
 
-function New-M365EnterpriseApplication() {
+function New-EnterpriseApplication() {
     <#
     .SYNOPSIS
 
@@ -1718,10 +1717,36 @@ function New-M365EnterpriseApplication() {
     param(
         [Parameter(Mandatory = $True)]
         [ValidateSet("Exchange", "SharePoint", "OneDrive")]
-        [String]$DataSource
+        [String]$DataSource,
+        [Parameter(Mandatory = $False)]
+        [Int]$Count,
+        [Parameter(Mandatory = $True)]
+        [String]$Token,
+        [Parameter(Mandatory = $True)]
+        [String]$PolarisURL
     )
 
+    $headers = @{
+        'Content-Type'  = 'application/json';
+        'Accept'        = 'application/json';
+        'Authorization' = $('Bearer ' + $Token);
+    }
+
+
+    $endpoint = $PolarisURL + '/api/graphql'
+    $o365AppType = @{
+        "OneDrive" = "ONEDIRVE"
+        "Exchange" = "EXCHANGE"
+        "SharePoint" = "SPOINT"
+
+    }
+
     Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" | Out-Null
+    
+
+    if ($PSBoundParameters.ContainsKey('Count') -eq $False) {
+        $Count = 1
+    }
     
     $polarisAccountName = "rubrik-se"
 
@@ -1731,17 +1756,17 @@ function New-M365EnterpriseApplication() {
         "SharePoint" = "Rubrik SharePoint - $($polarisAccountName)"
     }
 
+
     $passwordcred = @{
         "displayName" = $applicationName[$DataSource]
     }
-
     
     # API Service Principal IDs
     $grapApiAppId = "00000003-0000-0000-c000-000000000000"
     $ewsApiAppId = "00000002-0000-0ff1-ce00-000000000000"
     $sharePointApiAppId = "00000003-0000-0ff1-ce00-000000000000"
   
-    # Microsoft Teams can only be added through the Rubrik UI due
+    # Microsoft Teams can only be added through the  Rubrik UI due
     # to API limitations from Microsoft. Keeping this in place for future
     # proofing
     # $teamsPointApiAppId = $sharePointApiAppId
@@ -1758,75 +1783,183 @@ function New-M365EnterpriseApplication() {
     # Sites.FullControl.All
     $sharePointSpointPermissionGuid = '678536fe-1083-478a-9c59-b99265e6b0d3'
 
-    
-    
-    
-    $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg"
-    $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred
+    $enterpriceApplicationDetails = New-Object System.Collections.ArrayList
+    $servicePrincipalAppRoleAssignedRetry = New-Object System.Collections.ArrayList
+    $addPasswordToAppRetry = New-Object System.Collections.ArrayList
 
-    $newServicePrincipal = New-MgServicePrincipal -AppId $newEnterpriseApp.AppId
 
-    $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'"
-    if ($DataSource -eq "Exchange") {
     
-        $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'"
+    1..$Count | ForEach-Object { 
+        
+        $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg"
+        Write-Host $newEnterpriseApp.AppId
 
-        foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
-            New-MgServicePrincipalAppRoleAssignedTo `
-            -ServicePrincipalId $newServicePrincipal.Id `
-            -ResourceId $graphApiServicePrincipal.Id `
-            -PrincipalId $newServicePrincipal.Id `
-            -AppRoleId $iD | Out-Null
+        try {
+            $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred 
+        }
+        catch {
+            Write-Host "Add Password failed" 
+            # Wait for the Enterprise Application to be populated in the Microsoft database
+            while ($true) {
+                $appStatusCheck = Get-MgApplication -Filter "AppId eq '$($newEnterpriseApp.AppId)'"
+                if ($appStatusCheck){
+                    break
+                } else {
+                    Write-Host "Waiting 5 seconds"
+                    Start-Sleep 5                        
+                }
+            }
+
+            $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred
 
         }
+    
+        
+        $newServicePrincipal = New-MgServicePrincipal -AppId $newEnterpriseApp.AppId
 
-        foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
-            New-MgServicePrincipalAppRoleAssignedTo `
-            -ServicePrincipalId $newServicePrincipal.Id `
-            -ResourceId $ewsApiServicePrincipal.Id `
-            -PrincipalId $newServicePrincipal.Id `
-            -AppRoleId $iD | Out-Null
+        $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'"
+        if ($DataSource -eq "Exchange") {
+        
+            $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'"
+
+            foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
+                try {
+                    New-MgServicePrincipalAppRoleAssignedTo `
+                    -ServicePrincipalId $newServicePrincipal.Id `
+                    -ResourceId $graphApiServicePrincipal.Id `
+                    -PrincipalId $newServicePrincipal.Id `
+                    -AppRoleId $iD -ErrorAction Stop| Out-Null
+                    
+                }
+                catch {
+                    Write-Host "Error Graph"
+                    $tempSpDetails = New-Object System.Object
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $graphApiServicePrincipal.Id
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
+                    $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
+                }
+                
+            }
+
+            foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
+                try {
+
+                    New-MgServicePrincipalAppRoleAssignedTo `
+                    -ServicePrincipalId $newServicePrincipal.Id `
+                    -ResourceId $ewsApiServicePrincipal.Id `
+                    -PrincipalId $newServicePrincipal.Id `
+                    -AppRoleId $iD -ErrorAction Stop| Out-Null
+                    
+                }
+                catch {
+                    Write-Host "Error EWS"
+
+                    $tempSpDetails = New-Object System.Object
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $ewsApiServicePrincipal.Id
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $graphApiServicePrincipal.Id
+                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
+                    $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
+                    
+                }
+                
+            }
+
+
         }
+        elseif ($DataSource -eq "OneDrive") {
+            foreach ( $iD in $oneDriveGraphPermissionsGuid  ) {
+                New-MgServicePrincipalAppRoleAssignedTo `
+                -ServicePrincipalId $newServicePrincipal.Id `
+                -ResourceId $graphApiServicePrincipal.Id `
+                -PrincipalId $newServicePrincipal.Id `
+                -AppRoleId $iD | Out-Null
 
+            }
+        }
+        elseif ($DataSource -eq "SharePoint") {
+
+            $sharePointApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($sharePointApiAppId)'"
+
+            foreach ( $iD in $sharePointGraphPermissionGuid  ) {
+                New-MgServicePrincipalAppRoleAssignedTo `
+                -ServicePrincipalId $newServicePrincipal.Id `
+                -ResourceId $graphApiServicePrincipal.Id `
+                -PrincipalId $newServicePrincipal.Id `
+                -AppRoleId $iD | Out-Null
+        
+            }
+
+            foreach ( $iD in $sharePointSpointPermissionGuid  ) {
+                New-MgServicePrincipalAppRoleAssignedTo `
+                -ServicePrincipalId $newServicePrincipal.Id `
+                -ResourceId $sharePointApiServicePrincipal.Id `
+                -PrincipalId $newServicePrincipal.Id `
+                -AppRoleId $iD | Out-Null
+        
+            }
+        }
+        
+        $tempEntAppDetails = New-Object System.Object
+        $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "AppId" -Value $newEnterpriseApp.AppId
+        $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "Secret" -Value $addPasswordToApp.SecretText
+        $enterpriceApplicationDetails.Add($tempEntAppDetails) | Out-Null
+
+}
+   
+    if ($servicePrincipalAppRoleAssignedRetry.Count -gt 0) {
+        Write-Output "Retry Started"
+        foreach ( $retry in $servicePrincipalAppRoleAssignedRetry  ) {
+            Write-Output $retry.AppRoleId
+            New-MgServicePrincipalAppRoleAssignedTo `
+            -ServicePrincipalId $retry.ServicePrincipalId `
+            -ResourceId $retry.ResourceId `
+            -PrincipalId $retry.PrincipalId `
+            -AppRoleId $retry.AppRoleId | Out-Null
+    
+        }
+    }
+
+    $m365SubscriptionName = (Get-MgOrganization).DisplayName
+    Disconnect-Graph
+
+    Write-Host "Waiting 60 seconds"
+    Start-Sleep -Seconds 60
+    foreach ( $app in $enterpriceApplicationDetails  ) {
+       
+        $payload = @{
+            "operationName" = "AddCustomerO365AppMutation";
+            "variables" = @{
+                "o365AppType" = $o365AppType[$DataSource]
+                "o365AppClientId" = $app.AppId;
+                "o365AppClientSecret" = $app.Secret;
+                "o365SubscriptionName" = $m365SubscriptionName;
+            };
+            "query" = "mutation AddCustomerO365AppMutation(`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!) {
+                insertCustomerO365App(o365AppType: `$o365AppType, o365AppClientId: `$o365AppClientId, o365AppClientSecret: `$o365AppClientSecret, o365SubscriptionName: `$o365SubscriptionName) {
+                    success
+                }
+            }";
+        }
+       
+    
+    
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        if ($response.data.insertCustomerO365App.success -eq $true) {
+            Write-Host 'Success'
+        }
+        else {
+            Write-Host $response
+            throw 'Issue adding application'
+        }
 
     }
-    elseif ($DataSource -eq "OneDrive") {
-        foreach ( $iD in $oneDriveGraphPermissionsGuid  ) {
-            New-MgServicePrincipalAppRoleAssignedTo `
-            -ServicePrincipalId $newServicePrincipal.Id `
-            -ResourceId $graphApiServicePrincipal.Id `
-            -PrincipalId $newServicePrincipal.Id `
-            -AppRoleId $iD | Out-Null
 
-        }
-    }
-    elseif ($DataSource -eq "SharePoint") {
-
-        $sharePointApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($sharePointApiAppId)'"
-
-        foreach ( $iD in $sharePointGraphPermissionGuid  ) {
-            New-MgServicePrincipalAppRoleAssignedTo `
-              -ServicePrincipalId $newServicePrincipal.Id `
-              -ResourceId $graphApiServicePrincipal.Id `
-              -PrincipalId $newServicePrincipal.Id `
-              -AppRoleId $iD | Out-Null
     
-        }
 
-        foreach ( $iD in $sharePointSpointPermissionGuid  ) {
-            New-MgServicePrincipalAppRoleAssignedTo `
-              -ServicePrincipalId $newServicePrincipal.Id `
-              -ResourceId $sharePointApiServicePrincipal.Id `
-              -PrincipalId $newServicePrincipal.Id `
-              -AppRoleId $iD | Out-Null
-    
-        }
-    }
-
-    return @{
-        "AppId" = $newEnterpriseApp.AppId
-        "Secret" = $addPasswordToApp.SecretText
-    }
+    return $enterpriceApplicationDetails
     
 }
 
@@ -1933,6 +2066,22 @@ function New-PolarisM365App() {
     }
 }
 
+function RemoveEnterpriseApplication() {
+
+    param(
+        [Parameter(ValueFromPipelineByPropertyName=$true, Mandatory = $true)]
+        [String]$AppId
+    )
+    Write-Host "Removing $($AppId)"
+    $entApp = Get-MgApplication -Filter "AppId eq '$($AppId)'"
+
+    
+    
+    Remove-MgApplication -ApplicationId $entApp.Id | Out-Null
+}
+
+
+# foreach ($app in $new) {RemoveEnterpriseApplication -AppId $app.AppId}
 
 
 
