@@ -1691,17 +1691,16 @@ function New-EnterpriseApplication() {
     .OUTPUTS
 
     System.Collections.ArrayList. New-EnterpriseApplication returns an array list 
-    containing the appId, subscription, appType, addedAt, appOwner, and
-    isAuthenticated for each Microsoft 365 Enterprise Application connected
+    containing the AppId, Secret, and DataSource for each Microsoft 365 Enterprise Application connected
     to Rubrik.
 
     .EXAMPLE
 
     PS> New-EnterpriseApplication -PolarisURL $url -Token $token -DataSource "Exchange" -Count 5
     
-    AppId                                Secret
-    -----                                ------
-    667ccca2-cab6-424b-9ab1-a31f7391877b SvB7Q~CDSEvkMqZo_SBiZPPI_ALvOAeqaPY4u
+    AppId                                Secret                                DataSource
+    -----                                ------                                ----------
+    f79d1f98-f0ad-4c41-82a7-a86225eq6b76 5Zm70~AL1HCcU6eCU5HHHuIBfnE5et5OE19JE SharePoint
     #>
 
     # param(
@@ -1739,6 +1738,23 @@ function New-EnterpriseApplication() {
 
 
     $endpoint = $PolarisURL + '/api/graphql'
+
+    $payload = @{
+        "operationName" = "O365OrgCountAndComplianceQuery";
+        "query" = "query O365OrgCountAndComplianceQuery {
+            o365Orgs {
+              count
+            }
+          }";
+    }       
+
+
+    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+    if ($response.data.o365Orgs.count -lt 1) {
+        throw "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
+    }
+    
+
     $o365AppType = @{
         "OneDrive" = "ONEDRIVE"
         "Exchange" = "EXCHANGE"
@@ -1979,6 +1995,7 @@ function New-EnterpriseApplication() {
             $tempEntAppDetails = New-Object System.Object
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "AppId" -Value $newEnterpriseApp.AppId
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "Secret" -Value $addPasswordToApp.SecretText
+            $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "DataSource" -Value $DataSource
             $enterpriceApplicationDetails.Add($tempEntAppDetails) | Out-Null
 
     }
@@ -2001,11 +2018,12 @@ function New-EnterpriseApplication() {
 
     Start-Sleep -Seconds 60
     foreach ( $app in $enterpriceApplicationDetails  ) {
+        
        
         $payload = @{
             "operationName" = "AddCustomerO365AppMutation";
             "variables" = @{
-                "o365AppType" = $o365AppType[$DataSource]
+                "o365AppType" = $o365AppType[$app.DataSource] ;
                 "o365AppClientId" = $app.AppId;
                 "o365AppClientSecret" = $app.Secret;
                 "o365SubscriptionName" = $m365SubscriptionName;
@@ -2016,8 +2034,6 @@ function New-EnterpriseApplication() {
                 }
             }";
         }
-       
-    
     
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         if ($response.data.insertCustomerO365App.success -eq $true) {
