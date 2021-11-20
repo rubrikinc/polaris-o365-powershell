@@ -1730,6 +1730,17 @@ function New-EnterpriseApplication() {
         [String]$PolarisURL
     )
 
+    # Validate the required 'Microsoft.Graph' module is installed
+    # and provide a user friendly message when it's not.
+    if (Get-Module -ListAvailable -Name Microsoft.Graph)
+    {
+        
+    }
+    else
+    {
+        throw "The 'Microsoft.Graph' is required for this script. Run the follow command to install: Install-Module Microsoft.Graph"
+    }
+
     $headers = @{
         'Content-Type'  = 'application/json';
         'Accept'        = 'application/json';
@@ -2013,7 +2024,20 @@ function New-EnterpriseApplication() {
         }
     }
 
-    $m365SubscriptionName = (Get-MgOrganization).DisplayName
+    try {
+        $m365SubscriptionName = (Get-MgOrganization).DisplayName
+    }
+    catch {
+        
+        while ($true) {
+            Start-Sleep 5
+            $m365SubscriptionName = (Get-MgOrganization).DisplayName
+            if ($m365SubscriptionName){
+                break
+            } 
+        }
+    }
+
     Disconnect-Graph
 
     Start-Sleep -Seconds 60
