@@ -1,59 +1,4 @@
-function Get-PolarisToken() {
-    <#
-    .SYNOPSIS
-
-    Returns an API access token for a given Polaris account.
-
-    .DESCRIPTION
-
-    Returns an API access token for a given Polaris account, taking the URL, username and password.
-
-    .PARAMETER Username
-    Polaris username.
-
-    .PARAMETER Password
-    Polaris password.
-
-    .PARAMETER Password
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
-
-    .INPUTS
-
-    None. You cannot pipe objects to Get-PolarisToken.
-
-    .OUTPUTS
-
-    System.String. Get-PolarisToken returns a string containing the access token.
-
-    .EXAMPLE
-
-    PS> $token = Get-PolarisToken -Username $username -Password $password -PolarisURL $url
-    #>
-
-    param(
-        [Parameter(Mandatory = $True)]
-        [String]$Username,
-        [Parameter(Mandatory = $True)]
-        [String]$Password,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL
-    )
-    $headers = @{
-        'Content-Type' = 'application/json';
-        'Accept'       = 'application/json';
-    }
-    $payload = @{
-        "username" = $Username;
-        "password" = $Password;
-    }
-    # Replace com/ with com to prevent 404 error
-    $PolarisURL = $PolarisURL -replace '(.*?)com/(.*)', '$1com$2' 
-    $endpoint = $PolarisURL + '/api/session'
-    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    return $response.access_token
-}
-
-function Get-PolarisTokenServiceAccount() {
+function Connect-Polaris() {
     <#
     .SYNOPSIS
 
@@ -76,7 +21,11 @@ function Get-PolarisTokenServiceAccount() {
     PS> $token = Get-PolarisTokenServiceAccount
     #>
 
+    $InformationPreference = "Continue"
+    $DebugPreference = "Continue"
+    $VerbosePreference = "Continue"
 
+    Write-Information -Message "Info: Attempting to read the Service Account file located at ~/.rubrik/polaris-service-account.json "
     try {
         $serviceAccountFile = Get-Content -Path "~/.rubrik/polaris-service-account.json" -ErrorAction Stop | ConvertFrom-Json 
     }
@@ -98,6 +47,7 @@ function Get-PolarisTokenServiceAccount() {
         client_secret = $serviceAccountFile.client_secret
     }   
 
+    Write-Debug -Message "Determing if the Service Account file contains all required variables."
     $missingServiceAccount = @()
     if ($serviceAccountFile.client_id -eq $null) {
         $missingServiceAccount += "'client_id'"
@@ -121,12 +71,16 @@ function Get-PolarisTokenServiceAccount() {
         'Content-Type' = 'application/json';
         'Accept'       = 'application/json';
     }
-   
     
+    Write-Debug -Message "Connecting to the Polaris GraphQL API using the Service Account JSON file."
     $response = Invoke-RestMethod -Method POST -Uri $serviceAccountFile.access_token_uri -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    return $response.access_token
 
-   
+    Write-Verbose -Message "Creating the Rubrik Polaris Connection Global variable."
+    $global:rubrikPolarisConnection = @{
+        accessToken      = $response.access_token;
+        PolarisURL  = $serviceAccountFile.access_token_uri.Replace("/api/client_token", "")
+    }
+
 }
 
 function Get-PolarisSLA() {
@@ -168,13 +122,14 @@ function Get-PolarisSLA() {
     #>
 
     param(
-        [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL,
         [Parameter(Mandatory = $False)]
-        [String]$Name
+        [String]$Name,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
+
+    Write-Output $Token
+    Write-Output $PolarisURL
 
     $headers = @{
         'Content-Type'  = 'application/json';
@@ -261,10 +216,8 @@ function Get-PolarisO365Subscriptions {
     #>
 
     param(
-        [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -398,11 +351,9 @@ function Get-PolarisO365Mailboxes() {
 
     param(
         [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL,
-        [Parameter(Mandatory = $True)]
-        [String]$SubscriptionId
+        [String]$SubscriptionId,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -508,11 +459,9 @@ function Get-PolarisO365OneDrives() {
 
     param(
         [Parameter(Mandatory=$True)]
-        [String]$Token,
-        [Parameter(Mandatory=$True)]
-        [String]$PolarisURL,
-        [Parameter(Mandatory=$True)]
-        [String]$SubscriptionId
+        [String]$SubscriptionId,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -627,11 +576,9 @@ function Get-PolarisO365OneDriveSnapshot() {
 
     param(
         [Parameter(Mandatory=$True)]
-        [String]$Token,
-        [Parameter(Mandatory=$True)]
         [String]$OneDriveId,
-        [Parameter(Mandatory=$True)]
-        [String]$PolarisURL
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
         
     )
 
@@ -710,8 +657,8 @@ function Restore-PolarisO365OneDrive() {
         [String]$SnapshotStorageLocation,
         [Parameter(Mandatory=$True)]
         [String]$SnapshotId,
-        [Parameter(Mandatory=$True)]
-        [String]$PolarisURL
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -808,13 +755,11 @@ function Get-PolarisO365Mailbox() {
 
     param(
         [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL,
-        [Parameter(Mandatory = $True)]
         [String]$SubscriptionId,
         [Parameter(Mandatory = $True)]
-        [String]$SearchString
+        [String]$SearchString,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -925,13 +870,11 @@ function Get-PolarisO365OneDrive() {
 
     param(
         [Parameter(Mandatory=$True)]
-        [String]$Token,
-        [Parameter(Mandatory=$True)]
-        [String]$PolarisURL,
-        [Parameter(Mandatory=$True)]
         [String]$SubscriptionId,
         [Parameter(Mandatory=$True)]
-        [String]$SearchString
+        [String]$SearchString,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -1050,16 +993,14 @@ function Get-PolarisO365SharePoint() {
 
     param(
         [Parameter(Mandatory=$True)]
-        [String]$Token,
-        [Parameter(Mandatory=$True)]
-        [String]$PolarisURL,
-        [Parameter(Mandatory=$True)]
         [String]$SubscriptionId,
         [Parameter(Mandatory=$false)]
         [String]$SearchString,
         [Parameter(Mandatory=$false)]
         [ValidateSet("SitesOnly", "DocumentLibrariesOnly")]
-        [String]$Includes
+        [String]$Includes,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -1251,13 +1192,11 @@ function Set-PolarisO365ObjectSla() {
 
     param(
         [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL,
-        [Parameter(Mandatory = $True)]
         [String[]]$ObjectID,
         [Parameter(Mandatory = $True)]
-        [String]$SlaID
+        [String]$SlaID,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -1351,11 +1290,9 @@ function Get-PolarisJob() {
 
     param(
         [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL,
-        [Parameter(Mandatory = $True)]
-        [String]$JobId
+        [String]$JobId,
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
         
     )
 
@@ -1477,10 +1414,8 @@ function Get-PolarisO365EnterpriseApplication() {
     #>
 
     param(
-        [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -1593,10 +1528,8 @@ function Get-PolarisO365EnterpriseApplication() {
     #>
 
     param(
-        [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     $headers = @{
@@ -1724,14 +1657,13 @@ function New-EnterpriseApplication() {
         [String]$DataSource,
         [Parameter(Mandatory = $False)]
         [Int]$Count,
-        [Parameter(Mandatory = $True)]
-        [String]$Token,
-        [Parameter(Mandatory = $True)]
-        [String]$PolarisURL
+        [String]$Token = $global:RubrikPolarisConnection.accessToken,
+        [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     # Validate the required 'Microsoft.Graph' module is installed
     # and provide a user friendly message when it's not.
+    Write-Verbose "Checking for required module 'Microsoft.Graph'"
     if (Get-Module -ListAvailable -Name Microsoft.Graph)
     {
         
@@ -1740,6 +1672,8 @@ function New-EnterpriseApplication() {
     {
         throw "The 'Microsoft.Graph' is required for this script. Run the follow command to install: Install-Module Microsoft.Graph"
     }
+
+
 
     $headers = @{
         'Content-Type'  = 'application/json';
