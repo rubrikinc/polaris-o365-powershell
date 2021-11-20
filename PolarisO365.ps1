@@ -173,7 +173,7 @@ function Get-PolarisSLA() {
     return $sla_detail
 }
 
-function Get-PolarisO365Subscriptions {
+function Get-PolarisM365Subscriptions {
     <#
     .SYNOPSIS
 
@@ -192,17 +192,17 @@ function Get-PolarisO365Subscriptions {
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisO365Subscriptions.
+    None. You cannot pipe objects to Get-PolarisM365Subscriptions.
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365Subscriptions returns an array containing the ID, Name,
+    System.Object. Get-PolarisM365Subscriptions returns an array containing the ID, Name,
     status, count of users, count of unprotected users, and SLA details for the
     returned O365 Subscriptions.
 
     .EXAMPLE
 
-    PS> Get-PolarisO365Subscriptions -Token $token -PolarisURL $url
+    PS> Get-PolarisM365Subscriptions -Token $token -PolarisURL $url
 
     name                    : MyO365Subscription
     id                      : 12345678-1234-1234-abcd-123456789012
@@ -308,7 +308,7 @@ function Get-PolarisO365Subscriptions {
     return $org_details
 }
 
-function Get-PolarisO365Mailboxes() {
+function Get-PolarisM365Mailboxes() {
     <#
     .SYNOPSIS
 
@@ -327,20 +327,20 @@ function Get-PolarisO365Mailboxes() {
 
     .PARAMETER SubscriptionID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
-    'Get-PolarisO365Subscriptions' command.
+    'Get-PolarisM365Subscriptions' command.
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisO365Mailboxes.
+    None. You cannot pipe objects to Get-PolarisM365Mailboxes.
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365Mailboxes returns an array containing the ID, Name,
+    System.Object. Get-PolarisM365Mailboxes returns an array containing the ID, Name,
     email address, and SLA details for the returned O365 mailboxes.
 
     .EXAMPLE
 
-    PS> Get-PolarisO365Mailboxes -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    PS> Get-PolarisM365Mailboxes -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
 
     name                        : Milan Kundera
     id                          : 12341234-1234-1234-abcd-123456789012
@@ -429,7 +429,7 @@ function Get-PolarisO365Mailboxes() {
 }
 
 
-function Get-PolarisO365OneDrives() {
+function Get-PolarisM365OneDrives() {
     <#
     .SYNOPSIS
     Returns all O365 OneDrive users for a given subscription in a given Polaris account.
@@ -442,14 +442,14 @@ function Get-PolarisO365OneDrives() {
     The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
     .PARAMETER SubscriptionID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
-    'Get-PolarisO365Subscriptions' command.
+    'Get-PolarisM365Subscriptions' command.
     .INPUTS
-    None. You cannot pipe objects to Get-PolarisO365OneDrives.
+    None. You cannot pipe objects to Get-PolarisM365OneDrives.
     .OUTPUTS
-    System.Object. Get-PolarisO365OneDriveUsers returns an array containing the ID, Name,
+    System.Object. Get-PolarisM365OneDriveUsers returns an array containing the ID, Name,
     email address, and SLA details for the returned O365 OneDrive users.
     .EXAMPLE
-    PS> Get-PolarisO365OneDrives -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    PS> Get-PolarisM365OneDrives -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
     emailAddress           : milan.kundera@mydomain.onmicrosoft.com
@@ -541,14 +541,14 @@ function Get-PolarisO365OneDrives() {
     return $user_details
 }
 
-function Get-PolarisO365OneDriveSnapshot() {
+function Get-PolarisM365OneDriveSnapshot() {
     <#
     .SYNOPSIS
     Return the ID and Storage Location for the last OneDrive snapshot taken.
 
     .DESCRIPTION
     Returns an array that contains the Snapshot ID and Storage Location for the last snapshot taken on a OneDrive account. 
-    This information can then be utilized in Restore-PolarisO365OneDrive.
+    This information can then be utilized in Restore-PolarisM365OneDrive.
 
     .PARAMETER Token
     Polaris API Token.
@@ -558,17 +558,17 @@ function Get-PolarisO365OneDriveSnapshot() {
 
     .PARAMETER OneDriveID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
-    'Get-PolarisO365Subscriptions' command.
+    'Get-PolarisM365Subscriptions' command.
 
     .INPUTS
-    None. You cannot pipe objects to Get-PolarisO365OneDriveSnapshot.
+    None. You cannot pipe objects to Get-PolarisM365OneDriveSnapshot.
 
     .OUTPUTS
-    System.Object. Get-PolarisO365OneDriveSnapshot returns an array containing lastSnapshotId and
+    System.Object. Get-PolarisM365OneDriveSnapshot returns an array containing lastSnapshotId and
     lastSnapshotStorageLocation.
     
     .EXAMPLE
-    PS> Get-PolarisO365OneDriveSnapshot -Token $token -PolarisURL $url -OneDriveID $OneDriveID
+    PS> Get-PolarisM365OneDriveSnapshot -Token $token -PolarisURL $url -OneDriveID $OneDriveID
     lastSnapshotId                       lastSnapshotStorageLocation
     --------------                       ---------------------------
     15e80edc-3211-412d-8cd2-1f5e33c52863                          46
@@ -620,7 +620,7 @@ function Get-PolarisO365OneDriveSnapshot() {
     return $row
 }
 
-function Restore-PolarisO365OneDrive() {
+function Restore-PolarisM365OneDrive() {
     <#
     .SYNOPSIS
     Restore a Users entire OneDrive
@@ -639,11 +639,11 @@ function Restore-PolarisO365OneDrive() {
     .PARAMETER RecoveryOption
     The type of restore job you wish to use. Specify Original to restore to the Original OneDrive of Download to create a download link through Rubrik.
     .INPUTS
-    None. You cannot pipe objects to Restore-PolarisO365OneDrive.
+    None. You cannot pipe objects to Restore-PolarisM365OneDrive.
     .OUTPUTS
     String. The taskchainID of the Restore job which can be used to monitor the jobs progress.
     .EXAMPLE
-    PS> Restore-PolarisO365OneDrive -PolarisURL $url -OneDriveId $user.id -SnapshotId $snapshotDetails.lastSnapshotId -SnapshotStorageLocation $snapshotDetails.lastSnapshotStorageLocation -RecoveryOption "Download"
+    PS> Restore-PolarisM365OneDrive -PolarisURL $url -OneDriveId $user.id -SnapshotId $snapshotDetails.lastSnapshotId -SnapshotStorageLocation $snapshotDetails.lastSnapshotStorageLocation -RecoveryOption "Download"
     123594e0-1477-4be8-b6a2-f04174336a98
     #>
 
@@ -709,7 +709,7 @@ function Restore-PolarisO365OneDrive() {
     
 }
 
-function Get-PolarisO365Mailbox() {
+function Get-PolarisM365Mailbox() {
     <#
     .SYNOPSIS
 
@@ -728,23 +728,23 @@ function Get-PolarisO365Mailbox() {
 
     .PARAMETER SubscriptionID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
-    'Get-PolarisO365Subscriptions' command.
+    'Get-PolarisM365Subscriptions' command.
 
     .PARAMETER SearchString
     Search string, used to filter mailbox's name or user principal name.
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisO365Mailbox.
+    None. You cannot pipe objects to Get-PolarisM365Mailbox.
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365Mailbox returns an array containing the ID, Name,
+    System.Object. Get-PolarisM365Mailbox returns an array containing the ID, Name,
     email address, and SLA details for the returned O365 mailboxes.
 
     .EXAMPLE
 
-    PS> Get-PolarisO365Mailbox -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'Milan'
+    PS> Get-PolarisM365Mailbox -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'Milan'
 
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
@@ -838,7 +838,7 @@ function Get-PolarisO365Mailbox() {
     return $mailbox_details
 }
 
-function Get-PolarisO365OneDrive() {
+function Get-PolarisM365OneDrive() {
     <#
     .SYNOPSIS
     Returns a filtered list of O365 OneDrive users for a given subscription in a given Polaris account.
@@ -851,16 +851,16 @@ function Get-PolarisO365OneDrive() {
     The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
     .PARAMETER SubscriptionID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
-    'Get-PolarisO365Subscriptions' command.
+    'Get-PolarisM365Subscriptions' command.
     .PARAMETER SearchString
     Search string, used to filter user's name or email address.
     .INPUTS
-    None. You cannot pipe objects to Get-PolarisO365MailboxUser.
+    None. You cannot pipe objects to Get-PolarisM365MailboxUser.
     .OUTPUTS
-    System.Object. Get-PolarisO365OneDrives returns an array containing the ID, Name,
+    System.Object. Get-PolarisM365OneDrives returns an array containing the ID, Name,
     email address, and SLA details for the returned O365 OneDrive users.
     .EXAMPLE
-    PS> Get-PolarisO365OneDrives -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    PS> Get-PolarisM365OneDrives -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
     emailAddress           : milan.kundera@mydomain.onmicrosoft.com
@@ -958,7 +958,7 @@ function Get-PolarisO365OneDrive() {
     return $user_details
 }
 
-function Get-PolarisO365SharePoint() {
+function Get-PolarisM365SharePoint() {
     <#
     .SYNOPSIS
     Returns a filtered list of O365 SharePoint sites and/or document libraries for a given subscription in a given Polaris account.
@@ -971,19 +971,19 @@ function Get-PolarisO365SharePoint() {
     The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
     .PARAMETER SubscriptionId
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
-    'Get-PolarisO365Subscriptions' command.
+    'Get-PolarisM365Subscriptions' command.
     .PARAMETER SearchString
     Search string, used to filter site or document library name.
     .PARAMETER Includes
     It indidates if the returned object includes only SharePoint sites, document libraries or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly'.
     if it's not specified, it returns both sites and document libraries by default.
     .INPUTS
-    None. You cannot pipe objects to Get-PolarisO365SharePoint.
+    None. You cannot pipe objects to Get-PolarisM365SharePoint.
     .OUTPUTS
-    System.Object. Get-PolarisO365SharePoint returns an array containing the ID, Name,
+    System.Object. Get-PolarisM365SharePoint returns an array containing the ID, Name,
     and SLA details for the returned O365 SharePoint sites and/or document libraries.
     .EXAMPLE
-    PS> Get-PolarisO365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -Includes 'SitesOnly' -SearchString 'test'
+    PS> Get-PolarisM365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -Includes 'SitesOnly' -SearchString 'test'
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
     type                   : O365Site
@@ -1139,7 +1139,7 @@ function Get-PolarisO365SharePoint() {
     return $sharepoint_details
 }
 
-function Set-PolarisO365ObjectSla() {
+function Set-PolarisM365ObjectSla() {
     <#
     .SYNOPSIS
 
@@ -1157,8 +1157,8 @@ function Set-PolarisO365ObjectSla() {
     The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
 
     .PARAMETER ObjectID
-    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisO365Mailbox', 'Get-PolarisO365OneDrive',
-    'Get-PolarisO365Mailboxes', 'Get-PolarisO365OneDrives', or 'Get-PolarisO365Subscriptions' commands. This can take an array of object IDs.
+    The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisM365Mailbox', 'Get-PolarisM365OneDrive',
+    'Get-PolarisM365Mailboxes', 'Get-PolarisM365OneDrives', or 'Get-PolarisM365Subscriptions' commands. This can take an array of object IDs.
 
     .PARAMETER SlaID
     The SLA ID for an SLA Domain. Can be obtained through the 'Get-PolarisSLA' command. Use the string
@@ -1167,7 +1167,7 @@ function Set-PolarisO365ObjectSla() {
 
     .INPUTS
 
-    None. You cannot pipe objects to Set-PolarisO365ObjectSla.
+    None. You cannot pipe objects to Set-PolarisM365ObjectSla.
 
     .OUTPUTS
 
@@ -1176,17 +1176,17 @@ function Set-PolarisO365ObjectSla() {
 
     .EXAMPLE
 
-    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SlaID $my_sla.id
+    PS> Set-PolarisM365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SlaID $my_sla.id
     Success
 
     .EXAMPLE
 
-    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_onedrive.id -SlaID 'DONOTPROTECT'
+    PS> Set-PolarisM365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_onedrive.id -SlaID 'DONOTPROTECT'
     Success
 
     .EXAMPLE
 
-    PS> Set-PolarisO365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_subscription.id -SlaID 'UNPROTECTED'
+    PS> Set-PolarisM365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_subscription.id -SlaID 'UNPROTECTED'
     Success
     #>
 
@@ -1373,7 +1373,7 @@ function Get-PolarisJob() {
 }
 
 
-function Get-PolarisO365EnterpriseApplication() {
+function Get-PolarisM365EnterpriseApplication() {
     <#
     .SYNOPSIS
 
@@ -1393,18 +1393,18 @@ function Get-PolarisO365EnterpriseApplication() {
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisO365EnterpriseApplication.
+    None. You cannot pipe objects to Get-PolarisM365EnterpriseApplication.
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365EnterpriseApplication returns an array 
+    System.Object. Get-PolarisM365EnterpriseApplication returns an array 
     containing the appId, subscription, appType, addedAt, appOwner, and
     isAuthenticated for each Microsoft 365 Enterprise Application connected
     to Rubrik.
 
     .EXAMPLE
 
-    PS> Get-PolarisO365EnterpriseApplication -Token $token -PolarisURL $url
+    PS> Get-PolarisM365EnterpriseApplication -Token $token -PolarisURL $url
     appId           : 72d1998d-15dc-4388-80de-8731e59aab89
     subscription    : Rubrik Demo
     appType         : TEAMS
@@ -1487,7 +1487,7 @@ function Get-PolarisO365EnterpriseApplication() {
     return $appArray 
 }
 
-function Get-PolarisO365EnterpriseApplication() {
+function Get-PolarisM365EnterpriseApplication() {
     <#
     .SYNOPSIS
 
@@ -1507,18 +1507,18 @@ function Get-PolarisO365EnterpriseApplication() {
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisO365EnterpriseApplication.
+    None. You cannot pipe objects to Get-PolarisM365EnterpriseApplication.
 
     .OUTPUTS
 
-    System.Object. Get-PolarisO365EnterpriseApplication returns an array 
+    System.Object. Get-PolarisM365EnterpriseApplication returns an array 
     containing the appId, subscription, appType, addedAt, appOwner, and
     isAuthenticated for each Microsoft 365 Enterprise Application connected
     to Rubrik.
 
     .EXAMPLE
 
-    PS> Get-PolarisO365EnterpriseApplication -Token $token -PolarisURL $url
+    PS> Get-PolarisM365EnterpriseApplication -Token $token -PolarisURL $url
     appId           : 72d1998d-15dc-4388-80de-8731e59aab89
     subscription    : Rubrik Demo
     appType         : TEAMS
