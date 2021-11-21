@@ -1,9 +1,9 @@
 
-$Core = @(Get-ChildItem -Path $PSScriptRoot\Core\*.ps1 -Recurse -ErrorAction SilentlyContinue) | Sort-Object Name
-$M365 = @(Get-ChildItem -Path $PSScriptRoot\M365\*.ps1 -Recurse -ErrorAction SilentlyContinue) | Sort-Object Name
+$Functions = @(Get-ChildItem -Path $PSScriptRoot\*\*.ps1 -Recurse -ErrorAction SilentlyContinue) | Sort-Object Name
+
 
 # Dots source the private files
-foreach ($import in @($M365 + $Core)) {
+foreach ($import in $Functions) {
 	try {
 		. $import.fullName
 		Write-Verbose -Message ("Imported private function {0}" -f $import.fullName)
