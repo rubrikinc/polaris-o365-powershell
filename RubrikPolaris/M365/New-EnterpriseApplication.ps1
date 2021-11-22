@@ -59,9 +59,10 @@ function New-EnterpriseApplication() {
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
+
     # Validate the required 'Microsoft.Graph' module is installed
     # and provide a user friendly message when it's not.
-    Write-Verbose "Checking for required module 'Microsoft.Graph'"
+    Write-Information -Message "Info: Checking for required 'Microsoft.Graph' module."
     if (Get-Module -ListAvailable -Name Microsoft.Graph)
     {
         
@@ -70,6 +71,7 @@ function New-EnterpriseApplication() {
     {
         throw "The 'Microsoft.Graph' is required for this script. Run the follow command to install: Install-Module Microsoft.Graph"
     }
+
 
 
 
@@ -91,12 +93,11 @@ function New-EnterpriseApplication() {
           }";
     }       
 
-
+    Write-Information -Message "Info: Verying a Microsoft 365 subscription has been set up on Rubrik."
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     if ($response.data.o365Orgs.count -lt 1) {
         throw "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
     }
-    
 
     $o365AppType = @{
         "OneDrive" = "ONEDRIVE"
@@ -105,13 +106,15 @@ function New-EnterpriseApplication() {
 
     }
 
+    Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'AppRoleAssignment.ReadWrite.All' Scope."
     Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" | Out-Null
+    Write-Information -Message "Info: Successfully authenticated the Microsoft Graph API."
     
 
     if ($PSBoundParameters.ContainsKey('Count') -eq $False) {
         $Count = 1
     }
-    
+
     $polarisAccountName = $PolarisURL.Replace("https://", "").Replace(".my.rubrik.com", "").Replace("http://", "")
 
     $applicationName = @{
@@ -158,10 +161,15 @@ function New-EnterpriseApplication() {
             "SharePoint" = 24
         }
 
+        Write-Information -Message "Info: Will create $($toCreateDetails.Exchange) Exchange, $($toCreateDetails.OneDrive) OneDrive, and  $($toCreateDetails.SharePoint) SharePoint Enterprise Applications."
+
     } else {
         $toCreateDetails = @{
             $DataSource =  $Count
         }
+
+        Write-Information -Message "Info: Will create $Count $DataSource Enterprise Application(s)."
+
 
     }
 
@@ -171,13 +179,15 @@ function New-EnterpriseApplication() {
         
         1..$Count | ForEach-Object { 
 
+            Write-Information -Message "Info: Creating a $($DataSource) Enterprise Application."
+
             try {
-                $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg"
+                $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue"
             }
             catch {
 
                 while ($true) {
-                    $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg"
+                    $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue"
                     if ($newEnterpriseApp){
                         break
                     } else {
@@ -185,20 +195,21 @@ function New-EnterpriseApplication() {
                     }
                 }
 
-                $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg"
+                $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue"
 
                 
             }
+
+            Write-Information -Message "Info: Adding a Password to the Enterprise Application."
             
-            $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg"
 
             try {
-                $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred 
+                $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred  -InformationAction "SilentlyContinue"
             }
             catch {
                 # Wait for the Enterprise Application to be populated in the Microsoft database
                 while ($true) {
-                    $appStatusCheck = Get-MgApplication -Filter "AppId eq '$($newEnterpriseApp.AppId)'"
+                    $appStatusCheck = Get-MgApplication -Filter "AppId eq '$($newEnterpriseApp.AppId)'" -InformationAction "SilentlyContinue"
                     if ($appStatusCheck){
                         break
                     } else {
@@ -206,17 +217,19 @@ function New-EnterpriseApplication() {
                     }
                 }
 
-                $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred
+                $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred -InformationAction "SilentlyContinue"
 
             }
-        
-            
-            $newServicePrincipal = New-MgServicePrincipal -AppId $newEnterpriseApp.AppId
 
-            $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'"
+            Write-Information -Message "Info: Adding a Service Principal to the Enterprise Application."
+            
+            $newServicePrincipal = New-MgServicePrincipal -AppId $newEnterpriseApp.AppId -InformationAction "SilentlyContinue"
+
+            Write-Information -Message "Info: Getting the Service Principal ID from Microsoft."
+            $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'" -InformationAction "SilentlyContinue"
             if ($DataSource -eq "Exchange") {
             
-                $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'"
+                $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'" -InformationAction "SilentlyContinue"
 
                 foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
                     try {
@@ -224,7 +237,7 @@ function New-EnterpriseApplication() {
                         -ServicePrincipalId $newServicePrincipal.Id `
                         -ResourceId $graphApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -ErrorAction Stop| Out-Null
+                        -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
                         
                     }
                     catch {
@@ -247,7 +260,7 @@ function New-EnterpriseApplication() {
                         -ServicePrincipalId $newServicePrincipal.Id `
                         -ResourceId $ewsApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -ErrorAction Stop| Out-Null
+                        -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
                         
                     }
                     catch {
@@ -265,13 +278,15 @@ function New-EnterpriseApplication() {
 
             }
             elseif ($DataSource -eq "OneDrive") {
+                Write-Information -Message "Info: Adding the required API Permissions to the Enterprise Application."
+                
                 try {
                     foreach ( $iD in $oneDriveGraphPermissionsGuid  ) {
                         New-MgServicePrincipalAppRoleAssignedTo `
                         -ServicePrincipalId $newServicePrincipal.Id `
                         -ResourceId $graphApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -ErrorAction Stop| Out-Null
+                        -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
         
                     }
                     
@@ -285,11 +300,11 @@ function New-EnterpriseApplication() {
                     $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
                     
                 }
-                
+
             }
             elseif ($DataSource -eq "SharePoint") {
 
-                $sharePointApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($sharePointApiAppId)'"
+                $sharePointApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($sharePointApiAppId)'" -InformationAction "SilentlyContinue"
 
                 try {
                     foreach ( $iD in $sharePointGraphPermissionGuid  ) {
@@ -297,7 +312,7 @@ function New-EnterpriseApplication() {
                         -ServicePrincipalId $newServicePrincipal.Id `
                         -ResourceId $graphApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD | Out-Null
+                        -AppRoleId $iD -InformationAction "SilentlyContinue" | Out-Null
                 
                     }
                     
@@ -318,7 +333,7 @@ function New-EnterpriseApplication() {
                         -ServicePrincipalId $newServicePrincipal.Id `
                         -ResourceId $sharePointApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD | Out-Null
+                        -AppRoleId $iD -InformationAction "SilentlyContinue" | Out-Null
                 
                     }
                     
@@ -334,7 +349,8 @@ function New-EnterpriseApplication() {
                 }
                 
             }
-            
+
+            Write-Information -Message "Info: Storing the completed Enterprise Application details to memory."
             $tempEntAppDetails = New-Object System.Object
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "AppId" -Value $newEnterpriseApp.AppId
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "Secret" -Value $addPasswordToApp.SecretText
@@ -351,30 +367,34 @@ function New-EnterpriseApplication() {
             -ServicePrincipalId $retry.ServicePrincipalId `
             -ResourceId $retry.ResourceId `
             -PrincipalId $retry.PrincipalId `
-            -AppRoleId $retry.AppRoleId | Out-Null
+            -AppRoleId $retry.AppRoleId -InformationAction "SilentlyContinue" | Out-Null
 
         }
     }
 
     try {
-        $m365SubscriptionName = (Get-MgOrganization).DisplayName
+        Write-Information -Message "Info: Getting the Microsoft 365 Subscription name."
+
+        $m365SubscriptionName = (Get-MgOrganization -InformationAction "SilentlyContinue").DisplayName 
     }
     catch {
         
         while ($true) {
             Start-Sleep 5
-            $m365SubscriptionName = (Get-MgOrganization).DisplayName
+            $m365SubscriptionName = (Get-MgOrganization -InformationAction "SilentlyContinue").DisplayName 
             if ($m365SubscriptionName){
                 break
             } 
         }
     }
 
-    Disconnect-Graph
+    Write-Information -Message "Info: Disconnecting from the Microsoft Graph API"
 
-    Start-Sleep -Seconds 60
+    Disconnect-Graph
+    $staticSleepPeriod = 60
+    Write-Information -Message "Info: Waiting $($staticSleepPeriod) seconds to allow the Microsoft database to sync."
+    Start-Sleep -Seconds $staticSleepPeriod
     foreach ( $app in $enterpriceApplicationDetails  ) {
-        
        
         $payload = @{
             "operationName" = "AddCustomerO365AppMutation";
@@ -390,7 +410,7 @@ function New-EnterpriseApplication() {
                 }
             }";
         }
-    
+       
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         if ($response.data.insertCustomerO365App.success -eq $true) {
             Write-Host "Successfully added Enterprise Application $($app.AppId) to Rubrik."
