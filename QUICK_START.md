@@ -25,8 +25,8 @@ This token can then be used with the other commands in the module.
 
 The following commands are available in the module:
 
-* `Get-PolarisTokenServiceAccount`
-* `Get-PolarisToken`
+* `Connect-Polaris`
+* `Disconnect-Polaris`
 * `Get-PolarisSLA`
 * `Get-PolarisM365Subscriptions`
 * `Get-PolarisM365Mailboxes`
