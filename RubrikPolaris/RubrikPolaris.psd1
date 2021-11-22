@@ -30,7 +30,7 @@ CompanyName = 'Rubrik, Inc'
 Copyright = '(c) Rubrik. All rights reserved.'
 
 # Description of the functionality provided by this module
-# Description = ''
+Description = "This is a community project that provides a PowerShell module for managing and monitoring Rubrik's Polaris platform."
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '5.1'
