@@ -10,9 +10,9 @@ Import-Module ./RubrikPolaris/RubrikPolaris.psd1
 
 ## Using the module
 
-### Getting a token
+### Connect to Rubrik
 
-This module supports API Service Accounts for authentication. Once created, you'll need to rename the file to `polaris-service-account.json` and move the file to the `~/.rubrik` directory. To create a connect to Rubrik, use the following command:
+This module supports API Service Accounts for authentication. Once created, you'll need to rename the file to `polaris-service-account.json` and move the file to the `~/.rubrik` directory. To create a connection to Rubrik, use the following command:
 
 ```powershell
 Connect-Polaris
