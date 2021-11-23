@@ -72,6 +72,10 @@ function New-EnterpriseApplication() {
         throw "The 'Microsoft.Graph' is required for this script. Run the follow command to install: Install-Module Microsoft.Graph"
     }
 
+    if ($DataSource -eq "SharePoint"){
+        throw "SharePoint Enterprise Applications temporarily need to be created through the Rubrik."
+    } 
+
 
 
 
@@ -107,7 +111,7 @@ function New-EnterpriseApplication() {
     }
 
     Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'AppRoleAssignment.ReadWrite.All' Scope."
-    Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" | Out-Null
+    Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" -ErrorAction Stop | Out-Null
     Write-Information -Message "Info: Successfully authenticated the Microsoft Graph API."
     
 
@@ -158,8 +162,12 @@ function New-EnterpriseApplication() {
         $toCreateDetails = @{
             "Exchange" = 154
             "OneDrive" = 16
-            "SharePoint" = 24
+            # "SharePoint" = 24
         }
+
+      
+
+        throw "d"
 
         Write-Information -Message "Info: Will create $($toCreateDetails.Exchange) Exchange, $($toCreateDetails.OneDrive) OneDrive, and $($toCreateDetails.SharePoint) SharePoint Enterprise Applications."
 
