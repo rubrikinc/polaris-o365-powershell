@@ -190,9 +190,16 @@ function New-EnterpriseApplication() {
             Write-Information -Message "Info: Creating a $($DataSource) Enterprise Application."
 
             try {
-                $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue"
+                $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue" -ErrorAction Stop
             }
             catch {
+
+                $errorMessage = $_.Exception | Out-String
+                
+
+                if($errorMessage.Contains('Insufficient privileges to complete the operation')) {
+                    throw "Microsoft returned a 'Insufficient privileges to complete the operation' error message."
+                } 
 
                 while ($true) {
                     $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue"
@@ -215,6 +222,7 @@ function New-EnterpriseApplication() {
                 $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred  -InformationAction "SilentlyContinue"
             }
             catch {
+
                 # Wait for the Enterprise Application to be populated in the Microsoft database
                 while ($true) {
                     $appStatusCheck = Get-MgApplication -Filter "AppId eq '$($newEnterpriseApp.AppId)'" -InformationAction "SilentlyContinue"
