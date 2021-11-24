@@ -9,13 +9,6 @@ function Get-PolarisM365EnterpriseApplication() {
     Returns an array for each Enterprise Application configured on the Polaris
     account
 
-    .PARAMETER Token
-    Polaris access token, get this using the 'Get-PolarisTokenServiceAccount' or 'Get-PolarisToken' command.
-
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
-.
-
     .INPUTS
 
     None. You cannot pipe objects to Get-PolarisM365EnterpriseApplication.
@@ -29,7 +22,7 @@ function Get-PolarisM365EnterpriseApplication() {
 
     .EXAMPLE
 
-    PS> Get-PolarisM365EnterpriseApplication -Token $token -PolarisURL $url
+    PS> Get-PolarisM365EnterpriseApplication
     appId           : 72d1998d-15dc-4388-80de-8731e59aab89
     subscription    : Rubrik Demo
     appType         : TEAMS

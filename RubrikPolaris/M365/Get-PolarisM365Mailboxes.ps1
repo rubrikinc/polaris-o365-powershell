@@ -9,12 +9,6 @@ function Get-PolarisM365Mailboxes() {
     Returns an array of Office 365 mailboxes from a given subscription and Polaris account, taking
     an API token, Polaris URL, and subscription ID.
 
-    .PARAMETER Token
-    Polaris API Token.
-
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
-
     .PARAMETER SubscriptionID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
     'Get-PolarisM365Subscriptions' command.
@@ -30,7 +24,7 @@ function Get-PolarisM365Mailboxes() {
 
     .EXAMPLE
 
-    PS> Get-PolarisM365Mailboxes -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    PS> Get-PolarisM365Mailboxes -SubscriptionId $my_sub.id
 
     name                        : Milan Kundera
     id                          : 12341234-1234-1234-abcd-123456789012

@@ -7,12 +7,6 @@ function Get-PolarisM365OneDriveSnapshot() {
     Returns an array that contains the Snapshot ID and Storage Location for the last snapshot taken on a OneDrive account. 
     This information can then be utilized in Restore-PolarisM365OneDrive.
 
-    .PARAMETER Token
-    Polaris API Token.
-
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
-
     .PARAMETER OneDriveID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
     'Get-PolarisM365Subscriptions' command.
@@ -25,7 +19,7 @@ function Get-PolarisM365OneDriveSnapshot() {
     lastSnapshotStorageLocation.
     
     .EXAMPLE
-    PS> Get-PolarisM365OneDriveSnapshot -Token $token -PolarisURL $url -OneDriveID $OneDriveID
+    PS> Get-PolarisM365OneDriveSnapshot -OneDriveID $OneDriveID
     lastSnapshotId                       lastSnapshotStorageLocation
     --------------                       ---------------------------
     15e80edc-3211-412d-8cd2-1f5e33c52863                          46

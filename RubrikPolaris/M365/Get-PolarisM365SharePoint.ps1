@@ -3,28 +3,31 @@ function Get-PolarisM365SharePoint() {
     <#
     .SYNOPSIS
     Returns a filtered list of O365 SharePoint sites and/or document libraries for a given subscription in a given Polaris account.
+    
     .DESCRIPTION
     Returns a filtered list of Office 365 SharePoint sites and/or document libraries from a given subscription and Polaris account, taking
     an API token, Polaris URL, subscription ID, and search string.
-    .PARAMETER Token
-    Polaris API Token.
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
+    
     .PARAMETER SubscriptionId
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
     'Get-PolarisM365Subscriptions' command.
+    
     .PARAMETER SearchString
     Search string, used to filter site or document library name.
+    
     .PARAMETER Includes
     It indidates if the returned object includes only SharePoint sites, document libraries or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly'.
     if it's not specified, it returns both sites and document libraries by default.
+    
     .INPUTS
     None. You cannot pipe objects to Get-PolarisM365SharePoint.
+   
     .OUTPUTS
     System.Object. Get-PolarisM365SharePoint returns an array containing the ID, Name,
     and SLA details for the returned O365 SharePoint sites and/or document libraries.
+    
     .EXAMPLE
-    PS> Get-PolarisM365SharePoint -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -Includes 'SitesOnly' -SearchString 'test'
+    PS> Get-PolarisM365SharePoint -SubscriptionId $my_sub.id -Includes 'SitesOnly' -SearchString 'test'
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
     type                   : O365Site

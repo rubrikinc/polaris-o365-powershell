@@ -2,18 +2,13 @@ function Get-PolarisM365Mailbox() {
     <#
     .SYNOPSIS
 
-    Returns a filtered list of O365 mailboxes for a given subscription in a given Polaris account.
+    Returns a filtered list of Microsoft 365 mailboxes for a given subscription in a given Rubrik account.
 
     .DESCRIPTION
 
-    Returns a filtered list of Office 365 mailboxes from a given subscription and Polaris account, taking
-    an API token, Polaris URL, subscription ID, and search string.
+    Returns a filtered list of Microsoft 365 mailboxes from a given subscription and Rubrik account, taking
+    an subscription ID, and search string.
 
-    .PARAMETER Token
-    Polaris API Token.
-
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
 
     .PARAMETER SubscriptionID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
@@ -24,7 +19,7 @@ function Get-PolarisM365Mailbox() {
 
     .INPUTS
 
-    None. You cannot pipe objects to Get-PolarisM365Mailbox.
+    SubscriptionId. Value can be piped through Get-PolarisM365Subscriptions.
 
     .OUTPUTS
 
@@ -33,17 +28,25 @@ function Get-PolarisM365Mailbox() {
 
     .EXAMPLE
 
-    PS> Get-PolarisM365Mailbox -Token $token -PolarisURL $url -SubscriptionId $my_sub.id -SearchString 'Milan'
+    PS> Get-PolarisM365Mailbox -SubscriptionId $my_sub.id -SearchString 'Milan'
 
     name                   : Milan Kundera
-    id                     : 12341234-1234-1234-abcd-123456789012
+    subscriptionid         : 12341234-1234-1234-abcd-123456789012
+    emailAddress           : milan.kundera@mydomain.onmicrosoft.com
+    slaAssignment          : Direct
+    effectiveSlaDomainName : Gold
+
+    PS> Get-PolarisM365Subscriptions | Get-PolarisM365Mailbox -SearchString "Milan"
+
+    name                   : Milan Kundera
+    subscriptionid         : 12341234-1234-1234-abcd-123456789012
     emailAddress           : milan.kundera@mydomain.onmicrosoft.com
     slaAssignment          : Direct
     effectiveSlaDomainName : Gold
     #>
 
     param(
-        [Parameter(Mandatory = $True)]
+        [Parameter(Mandatory = $True,ValueFromPipelineByPropertyName = $True)]
         [String]$SubscriptionId,
         [Parameter(Mandatory = $True)]
         [String]$SearchString,

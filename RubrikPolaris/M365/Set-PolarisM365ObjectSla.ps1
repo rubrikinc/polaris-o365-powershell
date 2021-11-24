@@ -9,12 +9,6 @@ function Set-PolarisM365ObjectSla() {
     Sets the protection for an O365 mailbox, onedrive or subscription in a given Polaris account, taking
     an API token, Polaris URL, object ID, and SLA ID.
 
-    .PARAMETER Token
-    Polaris API Token.
-
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
-
     .PARAMETER ObjectID
     The object ID(s) for an O365 user or subscription. Can be obtained using 'Get-PolarisM365Mailbox', 'Get-PolarisM365OneDrive',
     'Get-PolarisM365Mailboxes', 'Get-PolarisM365OneDrives', or 'Get-PolarisM365Subscriptions' commands. This can take an array of object IDs.
@@ -35,12 +29,12 @@ function Set-PolarisM365ObjectSla() {
 
     .EXAMPLE
 
-    PS> Set-PolarisM365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_mailbox.id -SlaID $my_sla.id
+    PS> Set-PolarisM365ObjectSla -ObjectID $my_mailbox.id -SlaID $my_sla.id
     Success
 
     .EXAMPLE
 
-    PS> Set-PolarisM365ObjectSla -Token $token -PolarisURL $url -ObjectID $my_onedrive.id -SlaID 'DONOTPROTECT'
+    PS> Set-PolarisM365ObjectSla -ObjectID $my_onedrive.id -SlaID 'DONOTPROTECT'
     Success
 
     .EXAMPLE

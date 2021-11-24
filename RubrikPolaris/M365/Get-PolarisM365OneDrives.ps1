@@ -2,23 +2,24 @@ function Get-PolarisM365OneDrives() {
     <#
     .SYNOPSIS
     Returns all O365 OneDrive users for a given subscription in a given Polaris account.
+
     .DESCRIPTION
     Returns an array of Office OneDrive 365 users from a given subscription and Polaris account, taking
     an API token, Polaris URL, and subscription ID.
-    .PARAMETER Token
-    Polaris API Token.
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
+
     .PARAMETER SubscriptionID
     The Polaris subscription ID for a given O365 subscription. Can be obtained with the
     'Get-PolarisM365Subscriptions' command.
+
     .INPUTS
     None. You cannot pipe objects to Get-PolarisM365OneDrives.
+
     .OUTPUTS
     System.Object. Get-PolarisM365OneDriveUsers returns an array containing the ID, Name,
     email address, and SLA details for the returned O365 OneDrive users.
+
     .EXAMPLE
-    PS> Get-PolarisM365OneDrives -Token $token -PolarisURL $url -SubscriptionId $my_sub.id
+    PS> Get-PolarisM365OneDrives -SubscriptionId $my_sub.id
     name                   : Milan Kundera
     id                     : 12341234-1234-1234-abcd-123456789012
     emailAddress           : milan.kundera@mydomain.onmicrosoft.com

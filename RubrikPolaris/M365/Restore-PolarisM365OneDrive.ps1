@@ -2,26 +2,30 @@ function Restore-PolarisM365OneDrive() {
     <#
     .SYNOPSIS
     Restore a Users entire OneDrive
+    
     .DESCRIPTION
     Restore a users entire OneDrive to either it's original location or by created a Download link through Rubrik.
-    .PARAMETER Token
-    Polaris API Token.
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
+    
     .PARAMETER OneDriveId
     The ID of the OneDrive you wish to restore
+   
     .PARAMETER SnapshotId
     The ID of the snapshot you wish to restore.
+    
     .PARAMETER SnapshotStorageLocation
     The ID of the snapshot storage location you wish to restore.
+    
     .PARAMETER RecoveryOption
     The type of restore job you wish to use. Specify Original to restore to the Original OneDrive of Download to create a download link through Rubrik.
+   
     .INPUTS
     None. You cannot pipe objects to Restore-PolarisM365OneDrive.
+   
     .OUTPUTS
     String. The taskchainID of the Restore job which can be used to monitor the jobs progress.
+   
     .EXAMPLE
-    PS> Restore-PolarisM365OneDrive -PolarisURL $url -OneDriveId $user.id -SnapshotId $snapshotDetails.lastSnapshotId -SnapshotStorageLocation $snapshotDetails.lastSnapshotStorageLocation -RecoveryOption "Download"
+    PS> Restore-PolarisM365OneDrive -OneDriveId $user.id -SnapshotId $snapshotDetails.lastSnapshotId -SnapshotStorageLocation $snapshotDetails.lastSnapshotStorageLocation -RecoveryOption "Download"
     123594e0-1477-4be8-b6a2-f04174336a98
     #>
 
