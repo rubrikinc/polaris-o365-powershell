@@ -7,14 +7,8 @@ function New-EnterpriseApplication() {
     .DESCRIPTION
 
     (In Beta) Connect to Microsoft 365 and created a new Enterprise Application. Once created, add the Enterprise Application to Rubrik. 
-
-    .PARAMETER Token
-    Polaris access token, get this using the 'Get-PolarisTokenServiceAccount' or 'Get-PolarisToken' command.
-
-    .PARAMETER PolarisURL
-    The URL for the Polaris account in the form 'https://$PolarisAccount.my.rubrik.com'
+    The Microsoft Graph "Application.ReadWrite.All" and "AppRoleAssignment.ReadWrite.All" permissions are required to create an Enterprise Application.
 .
-
     .INPUTS
 
     None. You cannot pipe objects to New-EnterpriseApplication.
@@ -33,21 +27,6 @@ function New-EnterpriseApplication() {
     -----                                ------                                ----------
     f79d1f98-f0ad-4c41-82a7-a86225eq6b76 5Zm70~AL1HCcU6eCU5HHHuIBfnE5et5OE19JE SharePoint
     #>
-
-    # param(
-    #     [Parameter(Mandatory = $True)]
-    #     [ValidateSet("Exchange", "SharePoint", "OneDrive", "FirstFull")]
-    #     [String]$DataSource,
-    #     [Parameter(Mandatory = $False)]
-    #     [Int]$Count,
-    #     [Parameter(Mandatory = $True)]
-    #     [String]$Token,
-    #     [Parameter(Mandatory = $True)]
-    #     [String]$PolarisURL
-    #     [String]$Token,
-    #     [Parameter(Mandatory = $True)]
-    #     [String]$PolarisURL
-    # )
 
     param(
         [Parameter(Mandatory = $True)]
@@ -75,9 +54,6 @@ function New-EnterpriseApplication() {
     if ($DataSource -eq "SharePoint"){
         throw "SharePoint Enterprise Applications temporarily need to be created through the Rubrik."
     } 
-
-
-
 
     $headers = @{
         'Content-Type'  = 'application/json';
@@ -110,8 +86,8 @@ function New-EnterpriseApplication() {
 
     }
 
-    Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'AppRoleAssignment.ReadWrite.All' Scope."
-    Connect-Graph -Scopes "AppRoleAssignment.ReadWrite.All" -ErrorAction Stop | Out-Null
+    Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'Application.ReadWrite.All' and 'AppRoleAssignment.ReadWrite.All' Scope."
+    Connect-Graph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All" -ErrorAction Stop | Out-Null
     Write-Information -Message "Info: Successfully authenticated the Microsoft Graph API."
     
 
