@@ -52,7 +52,7 @@ function New-EnterpriseApplication() {
     }
 
     if ($DataSource -eq "SharePoint"){
-        throw "SharePoint Enterprise Applications temporarily need to be created through the Rubrik."
+        throw "SharePoint Enterprise Applications temporarily need to be created through the Rubrik UI."
     } 
 
     $headers = @{
