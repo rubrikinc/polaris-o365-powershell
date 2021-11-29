@@ -141,10 +141,6 @@ function New-EnterpriseApplication() {
             # "SharePoint" = 24
         }
 
-      
-
-        throw "d"
-
         Write-Information -Message "Info: Will create $($toCreateDetails.Exchange) Exchange, $($toCreateDetails.OneDrive) OneDrive, and $($toCreateDetails.SharePoint) SharePoint Enterprise Applications."
 
     } else {
