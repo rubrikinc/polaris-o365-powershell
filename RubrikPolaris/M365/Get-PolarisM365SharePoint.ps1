@@ -2,10 +2,10 @@
 function Get-PolarisM365SharePoint() {
     <#
     .SYNOPSIS
-    Returns a filtered list of O365 SharePoint sites and/or document libraries for a given subscription in a given Polaris account.
+    Returns a filtered list of O365 SharePoint sites, document libraries and/or lists for a given subscription in a given Polaris account.
     
     .DESCRIPTION
-    Returns a filtered list of Office 365 SharePoint sites and/or document libraries from a given subscription and Polaris account, taking
+    Returns a filtered list of Office 365 SharePoint sites, document libraries and/or lists from a given subscription and Polaris account, taking
     an API token, Polaris URL, subscription ID, and search string.
     
     .PARAMETER SubscriptionId
@@ -13,18 +13,19 @@ function Get-PolarisM365SharePoint() {
     'Get-PolarisM365Subscriptions' command.
     
     .PARAMETER SearchString
-    Search string, used to filter site or document library name.
+    Search string, used to filter site, document library or list name.
     
     .PARAMETER Includes
-    It indidates if the returned object includes only SharePoint sites, document libraries or both. The value can only be 'SitesOnly', 'DocumentLibrariesOnly'.
-    if it's not specified, it returns both sites and document libraries by default.
+    It indicates if the returned object includes only SharePoint sites, document libraries, lists or a combination of them. The value can
+    only be 'SitesOnly', 'DocumentLibrariesOnly', or 'ListsOnly'.
+    if it's not specified, it returns all the SharePoint objects including sites, document libraries and lists by default.
     
     .INPUTS
     None. You cannot pipe objects to Get-PolarisM365SharePoint.
    
     .OUTPUTS
     System.Object. Get-PolarisM365SharePoint returns an array containing the ID, Name,
-    and SLA details for the returned O365 SharePoint sites and/or document libraries.
+    and SLA details for the returned O365 SharePoint sites, document libraries and/or lists.
     
     .EXAMPLE
     PS> Get-PolarisM365SharePoint -SubscriptionId $my_sub.id -Includes 'SitesOnly' -SearchString 'test'
@@ -41,7 +42,7 @@ function Get-PolarisM365SharePoint() {
         [Parameter(Mandatory=$false)]
         [String]$SearchString,
         [Parameter(Mandatory=$false)]
-        [ValidateSet("SitesOnly", "DocumentLibrariesOnly")]
+        [ValidateSet("SitesOnly", "DocumentLibrariesOnly", "ListsOnly")]
         [String]$Includes,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
@@ -57,6 +58,7 @@ function Get-PolarisM365SharePoint() {
 
     $o365Sites = $null
     $o365SharepointDrives = $null
+    $o365SharepointLists = $null
 
     $payload = @{
         "query"         = "";
@@ -122,6 +124,27 @@ function Get-PolarisM365SharePoint() {
         }
     }"
 
+    $queryLists = "o365SharepointLists(after: `$after, o365OrgId: `$o365OrgId, filter: `$filter, first: `$first, sortBy: `$sortBy, sortOrder: `$sortOrder) {
+           nodes {
+               id
+               naturalId
+               name
+               parentId
+               effectiveSlaDomain {
+                   id
+                   name
+               }
+               objectType
+               slaAssignment
+               onDemandSnapshotCount
+           }
+           pageInfo {
+               endCursor
+               hasNextPage
+               hasPreviousPage
+           }
+        }"
+
     if ($Includes -eq "SitesOnly") {
         $payload.query = "query O365SharepointQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
             $($querySites)
@@ -136,16 +159,25 @@ function Get-PolarisM365SharePoint() {
 
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         $o365SharepointDrives = $response.data.o365SharepointDrives
+    } elseif ($Includes -eq "ListsOnly") {
+        $payload.query = "query O365SharepointQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+            $($queryLists)
+        }"
+
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        $o365SharepointLists = $response.data.o365SharepointLists
     } else {
         $payload.query = "query O365SharepointQuery(`$after: String, `$o365OrgId:UUID!, `$filter: [Filter!], `$first: Int!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
             $($querySites)
             $($queryDrives)
+            $($queryLists)
         }"
 
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         $o365Sites = $response.data.o365Sites
         $o365SharepointDrives = $response.data.o365SharepointDrives
-     }
+        $o365SharepointLists = $response.data.o365SharepointLists
+    }
 
      $node_array += @()
      $sharepoint_details = @()
@@ -167,6 +199,16 @@ function Get-PolarisM365SharePoint() {
             $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
             $o365SharepointDrives = $response.data.o365SharepointDrives
             $node_array += $o365SharepointDrives.nodes
+        }
+    }
+
+    if ($null -ne $o365SharepointLists) {
+        $node_array += $o365SharepointLists.nodes
+        while ($o365SharepointLists.pageInfo.hasNextPage) {
+            $payload.variables.after = $o365SharepointLists.pageInfo.endCursor
+            $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+            $o365SharepointLists = $response.data.o365SharepointLists
+            $node_array += $o365SharepointLists.nodes
         }
     }
 
