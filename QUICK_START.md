@@ -99,7 +99,7 @@ $all_mailboxes = Get-PolarisM365Mailboxes  -SubscriptionId $my_org.id
 $500_mailboxes = $all_mailboxes | select -First 500
 $assign = Set-PolarisM365ObjectSla  -ObjectID $500_mailboxes.id -SlaID $my_sla.id
 
-# Can filter using - Includes 'SitesOnly'/'DocumentLibrariesOnly'
+# Can filter using - Includes 'SitesOnly'/'DocumentLibrariesOnly'/'ListsOnly'
 $all_sharepoint_objects = Get-PolarisM365SharePoint  -SubscriptionId $my_org.id
 $500_sharepoint_objects = $all_sharepoint_objects | select -First 500
 $assign_sharepoint = Set-PolarisM365ObjectSla  -ObjectID $500_sharepoint_objects.id -SlaID $my_sla.id
@@ -112,3 +112,25 @@ $500_mailboxes = $all_mailboxes | select -First 500
 ```
 
 Here we are just picking the first 500 accounts, but more specific selection could be achieved using standard PowerShell filtering on the `$all_mailboxes` array.
+
+## Bulk removing direct SLA (Inherited SLA will be applied)
+
+```powershell
+Import-Module ./RubrikPolaris/RubrikPolaris.psd1 
+Connect-Polaris
+$org_name = 'my-org-name'
+$all_orgs = Get-PolarisM365Subscriptions 
+$my_org = $all_orgs | ?{$_.name -eq $org_name}
+
+# Print out the org info
+Write-Output $my_org
+
+# Can filter using - Includes 'SitesOnly'/'DocumentLibrariesOnly'/'ListsOnly'
+$all_sharepoint_lists = Get-PolarisM365SharePoint  -SubscriptionId $my_org.id -Includes 'ListOnly'
+$500_sharepoint_lists = $all_sharepoint_lists | select -First 500
+$assign_sharepoint = Set-PolarisM365ObjectSla  -ObjectID $500_sharepoint_lists.id -SlaID 'UNPROTECTED'
+
+# Validate if the assignment was successful
+Write-Output $assign_sharepoint
+```
+Here we are just picking the first 500 SharePoint lists, but more specific selection could be achieved using standard PowerShell filtering on the `$all_sharepoint_lists` array.
