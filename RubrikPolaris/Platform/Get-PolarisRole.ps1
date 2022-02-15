@@ -6,7 +6,7 @@ function Get-PolarisRole() {
 
     .DESCRIPTION
 
-    Returns the Name, Description, and ID for Polaris Role(s).
+    Returns the Name, Description, and ID, and configured Privileges  for Polaris Role(s).
 
     .PARAMETER Token
     Polaris access token, get this using the 'Connect-Polaris 'command.
@@ -29,16 +29,16 @@ function Get-PolarisRole() {
     .EXAMPLE
 
     PS> Get-PolarisRole 
-    Name                        Description                                        ID
-    ----                        -----------                                        --
-    Engineering                 Engineering Users                                  f02e5e46-3693-4e94-82fc-edcb50bf694e
-    Engineering - SQL                                                              d0a55aa2-1023-4c9f-9e1d-844601a2ef37
-    Microsoft 365 - Engineering Local account access required for Engineering team 95ba8e14-347e-4597-ac42-608f5384f309
+    Name                        Description                                        ID                                    Privileges
+    ----                        -----------                                        --                                    --------
+    Engineering                 Engineering Users                                  f02e5e46-3693-4e94-82fc-edcb50bf694e  {ViewGcpCloudAccount, ViewReport}
+    Engineering - SQL                                                              d0a55aa2-1023-4c9f-9e1d-844601a2ef37  {ViewGcpCloudAccount, ViewReport}
+    Microsoft 365 - Engineering Local account access required for Engineering team 95ba8e14-347e-4597-ac42-608f5384f309  {ViewGcpCloudAccount, ViewReport}
 
     PS> Get-PolarisRole -Name "Microsoft 365 - Engineering"
-    Name                        Description                                        ID
-    ----                        -----------                                        --
-    Microsoft 365 - Engineering Local account access required for Engineering team 95ba8e14-347e-4597-ac42-608f5384f309
+    Name                        Description                                        ID                                   Privileges
+    ----                        -----------                                        --                                   ----------
+    Microsoft 365 - Engineering Local account access required for Engineering team 95ba8e14-347e-4597-ac42-608f5384f309 {ViewGcpCloudAccount, ViewReport}
     #>
     #>
 
@@ -71,12 +71,9 @@ function Get-PolarisRole() {
               id
               name
               description
-            }
-            pageInfo {
-              startCursor
-              endCursor
-              hasNextPage
-              hasPreviousPage
+              permissions {
+                operation
+              }
             }
           }
         }"
@@ -89,10 +86,16 @@ function Get-PolarisRole() {
     $role_details = @()
 
     foreach ($role in $data) {
-        $row = '' | Select-Object Name,Description,ID
+        $prvileges = @()
+        $row = '' | Select-Object Name,Description,ID,Privileges
         $row.name = $role.name;
         $row.description = $role.description;
         $row.id = $role.id;
+        foreach ($permission in $role.permissions) {
+            $prvileges += $permission.operation
+        }
+        $row.privileges = $prvileges
+
         $role_details += $row
 
     } 
