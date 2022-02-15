@@ -83,7 +83,8 @@ FunctionsToExport = @(
     'Get-PolarisSLA',
     'New-EnterpriseApplication',
     'Restore-PolarisM365OneDrive',
-    'Set-PolarisM365ObjectSla'
+    'Set-PolarisM365ObjectSla',
+    'Get-PolarisM365OneDrive'
 
 )
 
