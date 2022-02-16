@@ -4,19 +4,16 @@ function Restore-PolarisM365OneDrive() {
     Restore a Users entire OneDrive
     
     .DESCRIPTION
-    Restore a users entire OneDrive to either it's original location or by created a Download link through Rubrik.
-    
+    Restore a Users entire OneDrive based on the latest backup.
+
+    .PARAMETER Email
+    The Email address of the OneDrive user you wish to restore. 
+
     .PARAMETER OneDriveId
-    The ID of the OneDrive you wish to restore
-   
-    .PARAMETER SnapshotId
-    The ID of the snapshot you wish to restore.
-    
-    .PARAMETER SnapshotStorageLocation
-    The ID of the snapshot storage location you wish to restore.
+    The ID of the OneDrive you wish to restore. This value is only needed if the automatic ID lookup by Email fails.
     
     .PARAMETER RecoveryOption
-    The type of restore job you wish to use. Specify Original to restore to the Original OneDrive of Download to create a download link through Rubrik.
+    The type of restore job you wish to use. Original is only supported option.
    
     .INPUTS
     None. You cannot pipe objects to Restore-PolarisM365OneDrive.
@@ -25,23 +22,36 @@ function Restore-PolarisM365OneDrive() {
     String. The taskchainID of the Restore job which can be used to monitor the jobs progress.
    
     .EXAMPLE
-    PS> Restore-PolarisM365OneDrive -OneDriveId $user.id -SnapshotId $snapshotDetails.lastSnapshotId -SnapshotStorageLocation $snapshotDetails.lastSnapshotStorageLocation -RecoveryOption "Download"
-    123594e0-1477-4be8-b6a2-f04174336a98
+    PS> Restore-PolarisM365OneDrive -Email $emailAddress
     #>
 
     param(
         [Parameter(Mandatory=$True)]
-        [ValidateSet("Download", "Original")]
-        [String]$RecoveryOption,
-        [Parameter(Mandatory=$True)]
+        [String]$Email,
+        [Parameter(Mandatory=$False)]
+        [ValidateSet("Original")] # Keep code in place for future use. 
+        [String]$RecoveryOption = "Original",
+        [Parameter(Mandatory=$False)]
         [String]$OneDriveId,
-        [Parameter(Mandatory=$True)]
-        [String]$SnapshotStorageLocation,
-        [Parameter(Mandatory=$True)]
-        [String]$SnapshotId,
+        [Parameter(Mandatory=$False)]
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
+
+    if ($OneDriveId -ne $null) {
+        $oneDriveUser = Get-PolarisM365OneDrive -Email $Email 
+        if ($null -eq $oneDriveUser) {
+            throw "The specified OneDrive user was not found. Please check the email address or manually specify the OneDriveId variable and try again."
+        }
+
+        $OneDriveId = $oneDriveUser.id
+        
+    }
+
+    $snapshot = Get-PolarisM365OneDriveSnapshot -OneDriveID $OneDriveID
+    if ($null -eq $snapshot) {
+        throw "The specified OneDrive does not have any snapshots to restore from."
+    }     
 
     $headers = @{
         'Content-Type' = 'application/json';
@@ -51,6 +61,7 @@ function Restore-PolarisM365OneDrive() {
 
     $endpoint = $PolarisURL + '/api/graphql'
     
+    # Keep code in place for future use. 
     if ($RecoveryOption -eq "Download") {
         $actionType = "EXPORT_SNAPPABLE"
         
@@ -71,9 +82,9 @@ function Restore-PolarisM365OneDrive() {
                 @{
                     "FolderID" = "root";
                     "FolderName" = "OneDrive";
-                    "SnapshotID" = $SnapshotId;
+                    "SnapshotID" = $snapshot.lastSnapshotId;
                     "FolderSize" = 0;
-                    "SnapshotNum" = [int]$SnapshotStorageLocation;
+                    "SnapshotNum" = [int]$snapshot.lastSnapshotStorageLocation;
 
                 }
             );
