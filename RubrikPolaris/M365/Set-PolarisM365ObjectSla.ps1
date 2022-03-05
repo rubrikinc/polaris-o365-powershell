@@ -68,7 +68,13 @@ function Set-PolarisM365ObjectSla() {
             "objectIds"            = $ObjectID;
         };
         "query"         = "mutation AssignSLA(`$globalSlaOptionalFid: UUID, `$globalSlaAssignType: SlaAssignTypeEnum!, `$objectIds: [UUID!]!) {
-            assignSla(globalSlaOptionalFid: `$globalSlaOptionalFid, globalSlaAssignType: `$globalSlaAssignType, objectIds: `$objectIds) {
+            assignSla(
+                input : {
+                    slaOptionalId: `$globalSlaOptionalFid,
+                    slaDomainAssignType: `$globalSlaAssignType, 
+                    objectIds: `$objectIds
+                }
+            ) {
                 success
             }
         }";
