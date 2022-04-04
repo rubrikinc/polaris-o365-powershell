@@ -21,7 +21,7 @@ function New-EnterpriseApplication() {
 
     .EXAMPLE
 
-    PS> New-EnterpriseApplication -PolarisURL $url -Token $token -DataSource "Exchange" -Count 5
+    PS> New-EnterpriseApplication -DataSource "Exchange" -Count 5
     
     AppId                                Secret                                DataSource
     -----                                ------                                ----------
@@ -37,7 +37,6 @@ function New-EnterpriseApplication() {
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
-
 
     # Validate the required 'Microsoft.Graph' module is installed
     # and provide a user friendly message when it's not.
@@ -65,18 +64,37 @@ function New-EnterpriseApplication() {
     $endpoint = $PolarisURL + '/api/graphql'
 
     $payload = @{
-        "operationName" = "O365OrgCountAndComplianceQuery";
-        "query" = "query O365OrgCountAndComplianceQuery {
-            o365Orgs {
-              count
-            }
+        "operationName" = "O365OrgSummariesQuery";
+        "query" = "query O365OrgSummariesQuery {
+            o365OrgSummaries {
+                objectSummaries {
+                  isArchived
+                }
+              }
           }";
     }       
 
-    Write-Information -Message "Info: Verying a Microsoft 365 subscription has been set up on Rubrik."
+    Write-Information -Message "Info: Verifying a Microsoft 365 subscription has been set up on Rubrik."
+   
+    $subscriptionNotPresentErrorMessage = "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
+
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    if ($response.data.o365Orgs.count -lt 1) {
-        throw "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
+    if ($response.data.o365OrgSummaries.objectSummaries.Count -eq 0) {
+        throw $subscriptionNotPresentErrorMessage
+    }
+
+    $subscriptionActive = $False
+    Foreach ($subscription in $response.data.o365OrgSummaries.objectSummaries){
+        if ($subscription.isArchived -eq $False){
+            $subscriptionActive = $True
+            break
+        }
+
+        
+    }
+
+    if ($subscriptionActive -eq $False){
+        throw $subscriptionNotPresentErrorMessage
     }
 
     $o365AppType = @{
