@@ -71,11 +71,10 @@ function Restore-PolarisM365Exchange() {
     Invoke-RestMethod -Method POST -Uri $endpoint -Body $($warmPayload | ConvertTo-JSON -Depth 100) -Headers $headers | Out-Null
     
     $snapshot = Get-PolarisM365ExchangeSnapshot -ExchangeID $ExchangeID
-    if ($null -eq $snapshot) {
-        throw "The specified Exchange does not have any snapshots to restore from."
+ 
+    if ($null -eq $snapshot.lastSnapshotId) {
+        throw "The specified Exchange mailbox does not have any snapshots to restore from."
     } 
-
-
 
     $rootFolderPayload = @{
         "operationName" = "folderQuery";
@@ -121,10 +120,7 @@ function Restore-PolarisM365Exchange() {
         }
 
     }
-
-    Write-Output $payload.variables | ConvertTo-JSON -Depth 100
-
-    throw "asdf"
+   
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
 
     return $response.data.restoreO365Mailbox.taskchainId

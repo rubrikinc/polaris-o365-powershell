@@ -38,7 +38,7 @@ function Restore-PolarisM365OneDrive() {
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
-    if ($OneDriveId -ne $null) {
+    if ($OneDriveId -eq $null) {
         $oneDriveUser = Get-PolarisM365OneDrive -Email $Email 
         if ($null -eq $oneDriveUser) {
             throw "The specified OneDrive user was not found. Please check the email address or manually specify the OneDriveId variable and try again."
@@ -47,11 +47,11 @@ function Restore-PolarisM365OneDrive() {
         $OneDriveId = $oneDriveUser.id
         
     }
-
     $snapshot = Get-PolarisM365OneDriveSnapshot -OneDriveID $OneDriveID
     if ($null -eq $snapshot) {
         throw "The specified OneDrive does not have any snapshots to restore from."
     }     
+    Write-Output $snapshot
 
     $headers = @{
         'Content-Type' = 'application/json';
@@ -68,6 +68,7 @@ function Restore-PolarisM365OneDrive() {
     } else {
         $actionType = "RESTORE_SNAPPABLE"
     }
+
 
 
     $payload = @{
@@ -96,9 +97,12 @@ function Restore-PolarisM365OneDrive() {
         }
 
     }
-    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
 
-    return $response.data.restoreO365Snappable.taskchainId
+    Write-Output $payload.variables
+    Write-Output $payload.variables.foldersToRestore
+    # $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+
+    # return $response.data.restoreO365Snappable.taskchainId
     
 }
 Export-ModuleMember -Function Restore-PolarisM365OneDrive
