@@ -50,6 +50,7 @@ function Get-PolarisM365ExchangeSnapshot() {
               snapshotConnection(first: 1, sortOrder: Desc) {
                 nodes {
                   sequenceNumber
+                  isIndexed
                 }
               }
             }
@@ -63,9 +64,10 @@ function Get-PolarisM365ExchangeSnapshot() {
    
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     
-    $row = '' | Select-Object lastSnapshotId,lastSnapshotStorageLocation
+    $row = '' | Select-Object lastSnapshotId,lastSnapshotStorageLocation, isIndexed
     $row.lastSnapshotId = $response.data.o365Mailbox.newestSnapshot.id
     $row.lastSnapshotStorageLocation = $response.data.o365Mailbox.snapshotConnection.nodes.sequenceNumber
+    $row.isIndexed = $response.data.o365Mailbox.snapshotConnection.nodes.isIndexed
     
     return $row
 }
