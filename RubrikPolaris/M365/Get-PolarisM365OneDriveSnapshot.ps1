@@ -8,8 +8,7 @@ function Get-PolarisM365OneDriveSnapshot() {
     This information can then be utilized in Restore-PolarisM365OneDrive.
 
     .PARAMETER OneDriveID
-    The Polaris subscription ID for a given O365 subscription. Can be obtained with the
-    'Get-PolarisM365Subscriptions' command.
+    The Rubrik ID for the OneDrive user.
 
     .INPUTS
     None. You cannot pipe objects to Get-PolarisM365OneDriveSnapshot.
@@ -51,6 +50,7 @@ function Get-PolarisM365OneDriveSnapshot() {
               snapshotConnection(first: 1, sortOrder: Desc) {
                 nodes {
                   sequenceNumber
+                  isIndexed
                 }
               }
             }
@@ -64,9 +64,10 @@ function Get-PolarisM365OneDriveSnapshot() {
    
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     
-    $row = '' | Select-Object lastSnapshotId,lastSnapshotStorageLocation
+    $row = '' | Select-Object lastSnapshotId,lastSnapshotStorageLocation, isIndexed
     $row.lastSnapshotId = $response.data.o365Onedrive.newestSnapshot.id
     $row.lastSnapshotStorageLocation = $response.data.o365Onedrive.snapshotConnection.nodes.sequenceNumber
+    $row.isIndexed = $response.data.o365Onedrive.snapshotConnection.nodes.isIndexed
     
     return $row
 }

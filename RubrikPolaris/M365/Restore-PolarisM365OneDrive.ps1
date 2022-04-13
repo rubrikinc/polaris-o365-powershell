@@ -4,19 +4,16 @@ function Restore-PolarisM365OneDrive() {
     Restore a Users entire OneDrive
     
     .DESCRIPTION
-    Restore a users entire OneDrive to either it's original location or by created a Download link through Rubrik.
-    
+    Restore a Users entire OneDrive based on the latest backup.
+
+    .PARAMETER Email
+    The Email address of the OneDrive user you wish to restore. 
+
     .PARAMETER OneDriveId
-    The ID of the OneDrive you wish to restore
-   
-    .PARAMETER SnapshotId
-    The ID of the snapshot you wish to restore.
-    
-    .PARAMETER SnapshotStorageLocation
-    The ID of the snapshot storage location you wish to restore.
+    The ID of the OneDrive you wish to restore. This value is only needed if the automatic ID lookup by Email fails.
     
     .PARAMETER RecoveryOption
-    The type of restore job you wish to use. Specify Original to restore to the Original OneDrive of Download to create a download link through Rubrik.
+    The type of restore job you wish to use. Original is only supported option.
    
     .INPUTS
     None. You cannot pipe objects to Restore-PolarisM365OneDrive.
@@ -25,20 +22,18 @@ function Restore-PolarisM365OneDrive() {
     String. The taskchainID of the Restore job which can be used to monitor the jobs progress.
    
     .EXAMPLE
-    PS> Restore-PolarisM365OneDrive -OneDriveId $user.id -SnapshotId $snapshotDetails.lastSnapshotId -SnapshotStorageLocation $snapshotDetails.lastSnapshotStorageLocation -RecoveryOption "Download"
-    123594e0-1477-4be8-b6a2-f04174336a98
+    PS> Restore-PolarisM365OneDrive -Email $emailAddress
     #>
 
     param(
         [Parameter(Mandatory=$True)]
-        [ValidateSet("Download", "Original")]
-        [String]$RecoveryOption,
-        [Parameter(Mandatory=$True)]
-        [String]$OneDriveId,
-        [Parameter(Mandatory=$True)]
-        [String]$SnapshotStorageLocation,
-        [Parameter(Mandatory=$True)]
-        [String]$SnapshotId,
+        [Array]$Emails,
+        [Parameter(Mandatory=$False)]
+        [ValidateSet("Original")] # Keep code in place for future use. 
+        [String]$RecoveryOption = "Original",
+        [Parameter(Mandatory=$False)]
+        [Array]$OneDriveIds,
+        [Parameter(Mandatory=$False)]
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
@@ -51,6 +46,7 @@ function Restore-PolarisM365OneDrive() {
 
     $endpoint = $PolarisURL + '/api/graphql'
     
+    # Keep code in place for future use. 
     if ($RecoveryOption -eq "Download") {
         $actionType = "EXPORT_SNAPPABLE"
         
@@ -58,37 +54,89 @@ function Restore-PolarisM365OneDrive() {
         $actionType = "RESTORE_SNAPPABLE"
     }
 
+    #TODO: Prevent both $Emails and $OneDriveIds from being passed in at the same time.
+    Write-Information -Message "Starting the restoration process for $($Emails.Count) OneDrive account(s)."
+    Write-Information -Message "Determing the Rubrik ID for each OneDrive users."
 
-    $payload = @{
-        "operationName" = "O365RestoreOnedriveMutation";
-        "query" = "mutation O365RestoreOnedriveMutation(`$filesToRestore: [FileInfo!]!, `$foldersToRestore: [FolderInfo!]!, `$destOnedriveUUID: UUID!, `$sourceOnedriveUUID: UUID!, `$restoreFolderPath: String!, `$actionType: O365RestoreActionType!) {
-            restoreO365Snappable(snappableType: ONEDRIVE, sourceSnappableUUID: `$sourceOnedriveUUID, destSnappableUUID: `$destOnedriveUUID, snappableRestoreConfig: {OneDriveRestoreConfig: {FilesToRestore: `$filesToRestore, FoldersToRestore: `$foldersToRestore, RestoreFolderPath: `$restoreFolderPath}}, actionType: `$actionType) {
-              taskchainId
+    if ($OneDriveIds.Count -eq 0) {
+        $OneDriveIds = @()
+        foreach ($e in $Emails) {
+            $oneDriveUser = Get-PolarisM365OneDrive -Email $e 
+            if ($null -eq $oneDriveUser) {
+                Write-Warning -Message "The specified OneDrive user was not found. Please check the email address or manually specify the OneDriveId variable and try again."
             }
-          }";
-        "variables" = @{
-            "foldersToRestore" = @(
-                @{
-                    "FolderID" = "root";
-                    "FolderName" = "OneDrive";
-                    "SnapshotID" = $SnapshotId;
-                    "FolderSize" = 0;
-                    "SnapshotNum" = [int]$SnapshotStorageLocation;
 
+            $OneDriveIds += $oneDriveUser.id
+
+            # Warm the Search container on the backend to improve API performance below
+            $warmPayload = @{
+                "operationName" = "WarmO365ObjectSearchCacheMutation";
+                "query" = "mutation WarmO365ObjectSearchCacheMutation(`$snappableId: UUID!) {
+                            warmSearchCache(snappableFid: `$snappableId)
+                }";
+                "variables" = @{
+                    "snappableId" = $oneDriveUser.id;
                 }
-            );
-            "filesToRestore" = @();
-            "restoreFolderPath" = "";
-            "sourceOnedriveUUID" = $OneDriveId;
-            "destOnedriveUUID" = $OneDriveId;
-            "actionType" = $actionType;
+    
+            }
+    
+            Invoke-RestMethod -Method POST -Uri $endpoint -Body $($warmPayload | ConvertTo-JSON -Depth 100) -Headers $headers | Out-Null
+
+        }
+    }
+
+    #TODO: Conslidate these into a single array
+    Write-Information -Message "Starting the restore process for each OneDrive user."
+    $taskchainIds = @()
+    foreach ($oId in $OneDriveIds) {
+
+        $snapshot = Get-PolarisM365OneDriveSnapshot -OneDriveID $oId
+
+        if ($null -eq $snapshot.lastSnapshotId) {
+            Write-Warning -Message "The specified OneDrive does not have any snapshots to restore from."
+        } 
+
+        if ($snapshot.isIndexed -eq $false) {
+            Write-Warning -Message "The specified OneDrive is not indexed. Please wait for the indexing to complete and try again."
         }
 
-    }
-    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        $payload = @{
+            "operationName" = "O365RestoreOnedriveMutation";
+            "query" = "mutation O365RestoreOnedriveMutation(`$filesToRestore: [FileInfo!]!, `$foldersToRestore: [FolderInfo!]!, `$destOnedriveUUID: UUID!, `$sourceOnedriveUUID: UUID!, `$restoreFolderPath: String!, `$actionType: O365RestoreActionType!) {
+                restoreO365Snappable(snappableType: ONEDRIVE, sourceSnappableUUID: `$sourceOnedriveUUID, destSnappableUUID: `$destOnedriveUUID, snappableRestoreConfig: {OneDriveRestoreConfig: {FilesToRestore: `$filesToRestore, FoldersToRestore: `$foldersToRestore, RestoreFolderPath: `$restoreFolderPath}}, actionType: `$actionType) {
+                  taskchainId
+                }
+              }";
+            "variables" = @{
+                "foldersToRestore" = @(
+                    @{
+                        "FolderID" = "root";
+                        "FolderName" = "OneDrive";
+                        "SnapshotID" = $snapshot.lastSnapshotId;
+                        "FolderSize" = 0;
+                        "SnapshotNum" = [int]$snapshot.lastSnapshotStorageLocation;
+    
+                    }
+                );
+                "filesToRestore" = @();
+                "restoreFolderPath" = "";
+                "sourceOnedriveUUID" = $oId ;
+                "destOnedriveUUID" = $oId ;
+                "actionType" = $actionType;
+            }
+    
+        }
 
-    return $response.data.restoreO365Snappable.taskchainId
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+    
+        $taskchainIds += $response.data.restoreO365Snappable.taskchainId
+       
+
+    }
+
+    return $taskchainIds
+
+    
     
 }
 Export-ModuleMember -Function Restore-PolarisM365OneDrive
-
