@@ -21,7 +21,7 @@ function New-EnterpriseApplication() {
 
     .EXAMPLE
 
-    PS> New-EnterpriseApplication -PolarisURL $url -Token $token -DataSource "Exchange" -Count 5
+    PS> New-EnterpriseApplication  -DataSource "Exchange" -Count 5
     
     AppId                                Secret                                DataSource
     -----                                ------                                ----------
