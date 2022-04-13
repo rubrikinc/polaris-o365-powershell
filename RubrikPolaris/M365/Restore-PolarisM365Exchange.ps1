@@ -45,116 +45,132 @@ function Restore-PolarisM365Exchange() {
     }
 
     $endpoint = $PolarisURL + '/api/graphql'
-    
 
+    
+    #TODO: Prevent both $Emails and $ExchangeIds from being passed.
+    Write-Information -Message "Starting the restoration process for $($Emails.Count) Exchange account(s)."
+    Write-Information -Message "Determing the Rubrik ID for each Exchange users."
     if ($ExchangeIds.Count -eq 0) {
         $ExchangeIds = @()
         foreach ($e in $Emails) {
             $ExchangeUser = Get-PolarisM365Exchange -Email $e
-            #TODO - Create a warning instead of throwing an error
+            #TODO: Create a warning instead of Write-Warning -Messageing an error
             if ($null -eq $ExchangeUser) {
-                throw "The specified Exchange user was not found. Please check the email address or manually specify the ExchangeId variable and try again."
+                Write-Warning -Message "The specified $e user was not found. Please check the email address or manually specify the ExchangeId variable and try again."
+            } else {
+                $ExchangeIds += $ExchangeUser.id
+
+                # Warm the Search container on the backend to improve API performance below
+                $warmPayload = @{
+                    "operationName" = "WarmO365ObjectSearchCacheMutation";
+                    "query" = "mutation WarmO365ObjectSearchCacheMutation(`$snappableId: UUID!) {
+                                warmSearchCache(snappableFid: `$snappableId)
+                    }";
+                    "variables" = @{
+                        "snappableId" = $ExchangeUser.id;
+                    }
+        
+                }
+        
+                Invoke-RestMethod -Method POST -Uri $endpoint -Body $($warmPayload | ConvertTo-JSON -Depth 100) -Headers $headers | Out-Null
+
             }
 
-            $ExchangeIds += $ExchangeUser.id
-
+    
         }
-        
-        
+           
     }
 
-    foreach ($eId in $ExchangeIds) {
-        # Warm the Search container on the backend to improve API performance below
-        $warmPayload = @{
-            "operationName" = "WarmO365ObjectSearchCacheMutation";
-            "query" = "mutation WarmO365ObjectSearchCacheMutation(`$snappableId: UUID!) {
-                        warmSearchCache(snappableFid: `$snappableId)
-            }";
-            "variables" = @{
-                "snappableId" = $eId;
-            }
-
-        }
-
-        Invoke-RestMethod -Method POST -Uri $endpoint -Body $($warmPayload | ConvertTo-JSON -Depth 100) -Headers $headers | Out-Null
-
-    }
-    #TODO - Conslidat these into a single array
+ 
+    #TODO: Conslidate these into a single array
     $rootFolders = @()
     $snapshots = @()
+    $exchangeRestoreToSkip = @()
+    Write-Information -Message "Determining the latest snapshot for each Exchange user."
     foreach ($eId in $ExchangeIds) {
+        $skipRestore = $false
 
         $snapshot = Get-PolarisM365ExchangeSnapshot -ExchangeID $eId
         $snapshots += $snapshot
  
         if ($null -eq $snapshot.lastSnapshotId) {
-            #TODO - Create a warning instead of throwing an error
-            throw "The specified Exchange mailbox does not have any snapshots to restore from."
+            Write-Warning -Message "Skipping Restore: The specified Exchange mailbox does not have any snapshots to restore from."
+            $skipRestore = $true
         } 
 
         if ($snapshot.isIndexed -eq $false) {
-            #TODO - Create a warning instead of throwing an error
-            throw "The specified Exchange mailbox is not indexed. Please wait for the indexing to complete and try again."
-        }
-    
-        $rootFolderPayload = @{
-            "operationName" = "folderQuery";
-            "query" = "query folderQuery(`$snapshotFid: UUID!, `$folderId: String!, `$snappableFid: UUID!, `$orgId: UUID!) {
-                browseFolder(snapshotFid: `$snapshotFid, folderId: `$folderId, snappableFid: `$snappableFid, orgId: `$orgId) {
-                    edges {
-                      node {
-                        id
-                      }
-                    }
-                  }}";
-            "variables" = @{
-                "snappableFid" = $eId;
-                "snapshotFid" = $snapshot.lastSnapshotId;
-                "folderId" = "root";
-                "orgId" = $ExchangeUser.subscriptionId;
-            }
-    
+            Write-Warning -Message "Skipping Restore: The specified Exchange mailbox is not indexed. Please wait for the indexing to complete and try again."
+            $skipRestore = $true
         }
 
+        if ($skipRestore -eq $false) {
+            $rootFolderPayload = @{
+                "operationName" = "folderQuery";
+                "query" = "query folderQuery(`$snapshotFid: UUID!, `$folderId: String!, `$snappableFid: UUID!, `$orgId: UUID!) {
+                    browseFolder(snapshotFid: `$snapshotFid, folderId: `$folderId, snappableFid: `$snappableFid, orgId: `$orgId) {
+                        edges {
+                          node {
+                            id
+                          }
+                        }
+                      }}";
+                "variables" = @{
+                    "snappableFid" = $eId;
+                    "snapshotFid" = $snapshot.lastSnapshotId;
+                    "folderId" = "root";
+                    "orgId" = $ExchangeUser.subscriptionId;
+                }
         
+            }
     
-        $rootFolder =  Invoke-RestMethod -Method POST -Uri $endpoint -Body $($rootFolderPayload | ConvertTo-JSON -Depth 100) -Headers $headers
-        $rootFolders += $rootFolder
+        
+            $rootFolder =  Invoke-RestMethod -Method POST -Uri $endpoint -Body $($rootFolderPayload | ConvertTo-JSON -Depth 100) -Headers $headers
+            $rootFolders += $rootFolder
+        } else {
+            $exchangeRestoreToSkip += $eId
+        }
+    
+       
 
     }
 
-    #TODO - Add error handing if any foreach loop fails (i.e prevent a mismatch of IDs)  
+    #TODO: Add error handing if any foreach loop fails (i.e prevent a mismatch of IDs) 
+    Write-Information -Message "Starting the restore process for each Exchange user."
     $taskchainIds = @()
     foreach ($eId in $exchangeIds){
-        $index = [array][array]::IndexOf($exchangeIds, $eId)
 
+        if ($exchangeRestoreToSkip.Contains($eId) -eq $false) {
+            
+            $index = [array][array]::IndexOf($exchangeIds, $eId)
 
-        # cannot index into a null array.
-        $payload = @{
-            "operationName" = "O365RestoreMailboxMutation";
-            "query" = "mutation O365RestoreMailboxMutation(`$orgId: UUID, `$mailboxId: UUID!, `$restoreConfigs: [RestoreObjectConfig!]!) {
-                restoreO365Mailbox(restoreConfig: {mailboxUUID: `$mailboxId, restoreConfigs: `$restoreConfigs, orgUuid: `$orgId}) {
-                  taskchainId
-                }
-              }
-              ";
-            "variables" = @{
-                "mailboxId" = $eID;
-                "orgId" = $ExchangeUser.subscriptionId;
-                "restoreConfigs" = @(
-                    @{
-                        "SnapshotUUID" = $snapshots[$index].lastSnapshotId;
-                        "FolderID" = $rootFolders[$index].data.browseFolder.edges[0].node.id;
-    
+            #TODO: prevent cannot index into a null array.
+            $payload = @{
+                "operationName" = "O365RestoreMailboxMutation";
+                "query" = "mutation O365RestoreMailboxMutation(`$orgId: UUID, `$mailboxId: UUID!, `$restoreConfigs: [RestoreObjectConfig!]!) {
+                    restoreO365Mailbox(restoreConfig: {mailboxUUID: `$mailboxId, restoreConfigs: `$restoreConfigs, orgUuid: `$orgId}) {
+                      taskchainId
                     }
-                );
-              
+                  }
+                  ";
+                "variables" = @{
+                    "mailboxId" = $eID;
+                    "orgId" = $ExchangeUser.subscriptionId;
+                    "restoreConfigs" = @(
+                        @{
+                            "SnapshotUUID" = $snapshots[$index].lastSnapshotId;
+                            "FolderID" = $rootFolders[$index].data.browseFolder.edges[0].node.id;
+        
+                        }
+                    );
+                  
+                }
+        
             }
-    
+           
+            $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+            $taskchainIds += $response.data.restoreO365Mailbox.taskchainId
         }
-       
-        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-        $taskchainIds += $response.data.restoreO365Mailbox.taskchainId
+
 
     
     }
