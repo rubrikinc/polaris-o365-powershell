@@ -87,6 +87,8 @@ FunctionsToExport = @(
     'Get-PolarisM365Exchange',
     'Restore-PolarisM365Exchange',
     'Get-PolarisM365ExchangeSnapshot'
+    'Get-PolarisM365OneDrive'
+
 
 )
 
