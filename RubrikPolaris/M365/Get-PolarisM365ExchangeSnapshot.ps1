@@ -1,24 +1,24 @@
-function Get-PolarisM365OneDriveSnapshot() {
+function Get-PolarisM365ExchangeSnapshot() {
     <#
     .SYNOPSIS
-    Return the ID and Storage Location for the last OneDrive snapshot taken.
+    Return the ID and Storage Location for the last Exchange snapshot taken.
 
     .DESCRIPTION
-    Returns an array that contains the Snapshot ID and Storage Location for the last snapshot taken on a OneDrive account. 
-    This information can then be utilized in Restore-PolarisM365OneDrive.
+    Returns an array that contains the Snapshot ID and Storage Location for the last snapshot taken on a Exchange account. 
+    This information can then be utilized in Restore-PolarisM365Exchange.
 
-    .PARAMETER OneDriveID
-    The Rubrik ID for the OneDrive user.
+    .PARAMETER ExchangeID
+    The ID of the Exchange user to find details of.
 
     .INPUTS
-    None. You cannot pipe objects to Get-PolarisM365OneDriveSnapshot.
+    None. You cannot pipe objects to Get-PolarisM365ExchangeSnapshot.
 
     .OUTPUTS
-    System.Object. Get-PolarisM365OneDriveSnapshot returns an array containing lastSnapshotId and
+    System.Object. Get-PolarisM365ExchangeSnapshot returns an array containing lastSnapshotId and
     lastSnapshotStorageLocation.
     
     .EXAMPLE
-    PS> Get-PolarisM365OneDriveSnapshot -OneDriveID $OneDriveID
+    PS> Get-PolarisM365ExchangeSnapshot -ExchangeID $ExchangeID
     lastSnapshotId                       lastSnapshotStorageLocation
     --------------                       ---------------------------
     15e80edc-3211-412d-8cd2-1f5e33c52863                          46
@@ -26,7 +26,7 @@ function Get-PolarisM365OneDriveSnapshot() {
 
     param(
         [Parameter(Mandatory=$True)]
-        [String]$OneDriveId,
+        [String]$ExchangeId,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
         
@@ -41,9 +41,9 @@ function Get-PolarisM365OneDriveSnapshot() {
     $endpoint = $PolarisURL + '/api/graphql'
 
     $payload = @{
-        "operationName" = "O365OnedriveList";
-        "query" = "query O365OnedriveList(`$snappableId: UUID!) {
-            o365Onedrive(snappableFid: `$snappableId) {
+        "operationName" = "GetO365UserSnapshotInfoQuery";
+        "query" = "query GetO365UserSnapshotInfoQuery(`$snappableId: UUID!) {
+            o365Mailbox(snappableFid: `$snappableId) {
               newestSnapshot {
                 id
               }
@@ -56,7 +56,7 @@ function Get-PolarisM365OneDriveSnapshot() {
             }
           }";
         "variables" = @{
-            "snappableId" = $OneDriveId;
+            "snappableId" = $ExchangeId;
         }
 
     }
@@ -65,11 +65,11 @@ function Get-PolarisM365OneDriveSnapshot() {
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     
     $row = '' | Select-Object lastSnapshotId,lastSnapshotStorageLocation, isIndexed
-    $row.lastSnapshotId = $response.data.o365Onedrive.newestSnapshot.id
-    $row.lastSnapshotStorageLocation = $response.data.o365Onedrive.snapshotConnection.nodes.sequenceNumber
-    $row.isIndexed = $response.data.o365Onedrive.snapshotConnection.nodes.isIndexed
+    $row.lastSnapshotId = $response.data.o365Mailbox.newestSnapshot.id
+    $row.lastSnapshotStorageLocation = $response.data.o365Mailbox.snapshotConnection.nodes.sequenceNumber
+    $row.isIndexed = $response.data.o365Mailbox.snapshotConnection.nodes.isIndexed
     
     return $row
 }
-Export-ModuleMember -Function Get-PolarisM365OneDriveSnapshot
+Export-ModuleMember -Function Get-PolarisM365ExchangeSnapshot
 
