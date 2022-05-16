@@ -1,15 +1,21 @@
+#Requires -Version 6.0 -RunAsAdministrator
 function New-EnterpriseApplication() {
     <#
     .SYNOPSIS
 
     (In Beta) Create a new Enterprise Application and then add to Rubrik.
 
+    .PARAMETER DataSource
+    The type of Enterprise Application you wish to created. Valid values are: Exchange, SharePoint, OneDrive, and FirstFull. When FirstFull is selected, the maximum number of Enterprise Applications Rubrik can load balance across for
+    every default deployment will be created. This includes SharePoint, OneDrive and Exchange.
+
     .DESCRIPTION
 
     (In Beta) Connect to Microsoft 365 and created a new Enterprise Application. Once created, add the Enterprise Application to Rubrik. 
     The Microsoft Graph "Application.ReadWrite.All" and "AppRoleAssignment.ReadWrite.All" permissions are required to create an Enterprise Application.
 .
-    .INPUTS
+    
+.INPUTS
 
     None. You cannot pipe objects to New-EnterpriseApplication.
 
@@ -50,11 +56,6 @@ function New-EnterpriseApplication() {
     {
         throw "The 'Microsoft.Graph' is required for this script. Run the follow command to install: Install-Module Microsoft.Graph"
     }
-
-    if ($DataSource -eq "SharePoint"){
-        throw "SharePoint Enterprise Applications temporarily need to be created through the Rubrik UI."
-    } 
-
     $headers = @{
         'Content-Type'  = 'application/json';
         'Accept'        = 'application/json';
@@ -73,7 +74,7 @@ function New-EnterpriseApplication() {
           }";
     }       
 
-    Write-Information -Message "Info: Verying a Microsoft 365 subscription has been set up on Rubrik."
+    Write-Information -Message "Info: Verifing a Microsoft 365 subscription has been set up on Rubrik."
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     if ($response.data.o365Orgs.count -lt 1) {
         throw "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
@@ -86,10 +87,6 @@ function New-EnterpriseApplication() {
 
     }
 
-    Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'Application.ReadWrite.All' and 'AppRoleAssignment.ReadWrite.All' Scope."
-    Connect-Graph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All" -ErrorAction Stop | Out-Null
-    Write-Information -Message "Info: Successfully authenticated the Microsoft Graph API."
-    
 
     if ($PSBoundParameters.ContainsKey('Count') -eq $False) {
         $Count = 1
@@ -138,8 +135,10 @@ function New-EnterpriseApplication() {
         $toCreateDetails = @{
             "Exchange" = 154
             "OneDrive" = 16
-            # "SharePoint" = 24
+            "SharePoint" = 24
         }
+
+     
 
         Write-Information -Message "Info: Will create $($toCreateDetails.Exchange) Exchange, $($toCreateDetails.OneDrive) OneDrive, and $($toCreateDetails.SharePoint) SharePoint Enterprise Applications."
 
@@ -153,6 +152,48 @@ function New-EnterpriseApplication() {
 
     }
 
+    # SharePoint Self-Signed Certificate Creation Variables
+    if ($DataSource -eq "SharePoint" -Or $DataSource -eq "FirstFull"){
+        $sslConfigFileName = "RubrikSSLConfigTemp.txt"
+        $sslConfig = "[req]
+        req_extensions = v3_req
+        distinguished_name = req_distinguished_name
+        
+        [req_distinguished_name]
+        
+        [v3_req]
+        keyUsage=critical,digitalSignature,keyCertSign
+        extendedKeyUsage=clientAuth,serverAuth"
+
+        $privateKeySize = 2048
+        $privateKeyFileName = "RubrikTempPrivateKey.pem"
+        $certFileName = "RubrikTempCert.crt"
+        $CertSubject = "/O=Rubrik"
+        $CertExpireDays = 3650
+
+        $convertedCertFileName = "RubrikTempConvertedFileCert.crt"
+        $openSSLVersion = openssl version
+        $supportWindowsVersion = "OpenSSL 1.1.1n  15 Mar 2022"
+
+        if ($IsWindows){
+            if ($openSSLVersion -ne $supportWindowsVersion){
+                throw "The SharePoint Enterprise Application creation process requires OpenSSL 1.1.1n 15 Mar 2022. Please download (https://slproweb.com/download/Win64OpenSSL-1_1_1n.exe) and try again."
+            }
+        } 
+
+        if ($PSVersionTable.PSVersion.Major -lt 6){
+            throw "The SharePoint Enterprise Application creation process requires PowerShell 6.0 or higher. Please upgrade and try again."
+        }
+
+
+        New-Item -Path . -Name  $sslConfigFileName -ItemType "file" -Value  $sslConfig | Out-Null
+        
+    } 
+
+    Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'Application.ReadWrite.All' and 'AppRoleAssignment.ReadWrite.All' Scope."
+    Connect-Graph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All" -ErrorAction Stop | Out-Null
+    Write-Information -Message "Info: Successfully authenticated the Microsoft Graph API."
+
     foreach ($source in $toCreateDetails.GetEnumerator()) {
         $DataSource = $source.Name
         $Count = $source.Value
@@ -162,7 +203,9 @@ function New-EnterpriseApplication() {
             Write-Information -Message "Info: Creating a $($DataSource) Enterprise Application."
 
             try {
+               
                 $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue" -ErrorAction Stop
+
             }
             catch {
 
@@ -334,15 +377,73 @@ function New-EnterpriseApplication() {
                     $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
                     $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
                     
+                } 
+
+
+                Write-Information -Message "Info: Creating an RSA private key for the SharePoint Enterprise Application."
+                if ($IsWindows){
+                    # On Windows openssl genrsa does not support additional options and SHA256 is already the default.
+                    openssl genrsa -out $privateKeyFileName $privateKeySize 2>$null
+                } else {
+                    openssl genrsa -out $privateKeyFileName $privateKeySize -sha256 -nodes 2>$null
                 }
+
+                Write-Information -Message "Info: Creating a x509 self-signed certificate using the private key."
+                openssl req -key $privateKeyFileName -new -x509 -days $CertExpireDays -out $certFileName -sha256 -subj $CertSubject -config $sslConfigFileName -extensions v3_req
+
+                Write-Information -Message "Info: Converting the certificate to the binary DER format."
+                openssl x509 -in $certFileName -outform der -out $convertedCertFileName -sha256
+
+
+                # Cert Raw Data Sent to M365
+                $certRawData = Get-Content "${convertedCertFileName}" -AsByteStream
+                # Cert Raw Data in Base 64 sent to Rubrik
+                $certRawDataBase64 = [System.Convert]::ToBase64String($certRawData)
+
+                $pemRawData  = Get-Content "${privateKeyFileName}" -AsByteStream
+                # Private Key in Base 64 sent to Rubrik
+                $pemRawDataBase64 = [System.Convert]::ToBase64String($pemRawData )
+
+            
+
+                $keyCredential = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphKeyCredential
+                $keyCredential.Type = "AsymmetricX509Cert";
+                $keyCredential.Usage = "Verify";
+                $keyCredential.Key = $certRawData;
+            
+                # Update-MgServicePrincipal -ServicePrincipalId $SPId -KeyCredentials $PrivateKeyCreds -PasswordCredentials $PasswordCreds
+                Write-Information -Message "Info: Adding the certs to the Enterprise Application"
+                try {
+                    # Update-MgApplication  -ApplicationId $newEnterpriseApp.Id -KeyCredentials $KeyCreds
+                    Update-MgApplication  -ApplicationId $newEnterpriseApp.Id -KeyCredentials $($keyCredential)
+                    
+                    # Update-MgServicePrincipal -ServicePrincipalId $newEnterpriseApp.Id -BodyParameter $params
+                    Write-Information -Message "Info: Successfully added the certs to the Enterprise Application"
+
+                }
+                catch {
+                    $errorMessage = $_.Exception | Out-String
+
+                    Write-Host "Error adding the certification to $($newEnterpriseApp.Id) to Rubrik. The error resposne is $($errorMessage)."
+                }
+
+
+                Remove-Item  "$certFileName"
+                Remove-Item "${convertedCertFileName}"
+                Remove-Item "${privateKeyFileName}"
+
                 
             }
+            
 
             Write-Information -Message "Info: Storing the completed Enterprise Application details to memory."
             $tempEntAppDetails = New-Object System.Object
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "AppId" -Value $newEnterpriseApp.AppId
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "Secret" -Value $addPasswordToApp.SecretText
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "DataSource" -Value $DataSource
+            $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "CertRawDataBase64" -Value $certRawDataBase64
+            $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "PemRawDataBase64" -Value $pemRawDataBase64
+
             $enterpriceApplicationDetails.Add($tempEntAppDetails) | Out-Null
 
     }
@@ -380,10 +481,19 @@ function New-EnterpriseApplication() {
 
     Disconnect-Graph
     $staticSleepPeriod = 60
+
     Write-Information -Message "Info: Waiting $($staticSleepPeriod) seconds to allow the Microsoft database to sync."
     Start-Sleep -Seconds $staticSleepPeriod
     foreach ( $app in $enterpriceApplicationDetails  ) {
-       
+
+        if ($app.DataSource -ne "SharePoint"){
+            $certRawData = ""
+            $pemRawData = ""
+        } else {
+            $certRawData = $app.CertRawDataBase64
+            $pemRawData = $app.PemRawDataBase64
+        }
+
         $payload = @{
             "operationName" = "AddCustomerO365AppMutation";
             "variables" = @{
@@ -391,24 +501,36 @@ function New-EnterpriseApplication() {
                 "o365AppClientId" = $app.AppId;
                 "o365AppClientSecret" = $app.Secret;
                 "o365SubscriptionName" = $m365SubscriptionName;
+                "o365Base64AppCertificate" =  $certRawData;
+                "o365Base64AppPrivateKey" =  $pemRawData;
+
+
             };
-            "query" = "mutation AddCustomerO365AppMutation(`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!) {
-                insertCustomerO365App(o365AppType: `$o365AppType, o365AppClientId: `$o365AppClientId, o365AppClientSecret: `$o365AppClientSecret, o365SubscriptionName: `$o365SubscriptionName) {
+            "query" = "mutation AddCustomerO365AppMutation(`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!) {
+                insertCustomerO365App(o365AppType: `$o365AppType, o365AppClientId: `$o365AppClientId, o365AppClientSecret: `$o365AppClientSecret, o365SubscriptionName: `$o365SubscriptionName, o365Base64AppCertificate: `$o365Base64AppCertificate, o365Base64AppPrivateKey: `$o365Base64AppPrivateKey) {
                     success
                 }
             }";
         }
-       
+
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         if ($response.data.insertCustomerO365App.success -eq $true) {
             Write-Host "Successfully added Enterprise Application $($app.AppId) to Rubrik."
         }
         else {
+            if ($response.errors){
+                $response = $response.errors[0].message
+            }
             Write-Host "Error adding Application $($app.AppId) to Rubrik. The error resposne is $($response)."
         }
 
     }
 
+
+    if ($null -ne $sslConfigFileName){
+        Remove-Item "$sslConfigFileName"
+
+    } 
     return $enterpriceApplicationDetails
     
 }
