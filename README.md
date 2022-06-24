@@ -1,22 +1,29 @@
-# Rubrik Polaris Office 365 Protection PowerShell Module
+# Rubrik Polaris Microsoft 365 Protection PowerShell Module
 
-Welcome to the Rubrik Office 365 Protection
+Welcome to the Rubrik Microsoft 365 Protection
 [PowerShell](https://docs.microsoft.com/en-us/powershell/) module! This module
 provides an SDK for writing PowerShell scripts that work with the Rubrik
-Polaris Office 365 protection product, allowing you to view all O365 users,
+Polaris Microsoft 365 protection product, allowing you to view all O365 users,
 their current SLA assignment and change those SLA assignments.
 
 ## :hammer: Installation
 
 See [Quick Start Guide](QUICK_START.md) for installation and usage instructions.
 
+### Requirements
+
+* PowerShell v6.0 or greater
+* When creating SharePoint Enterprise Applications with the `New-EnterpriseApplication` cmdlet, the script must be run as an administrator and OpenSSL must be installed. When running on Windows, only [openssl-3.0.2](https://slproweb.com/download/Win64OpenSSL-3_0_2.exe) is supported.
+
 ## :mag: Example
 
 See [Quick Start Guide](QUICK_START.md) for examples.
 
+
+
 ## :blue_book: Documentation
 
-Here are some resources to get you started! If you find any challenges from this project are not properly documented or are unclear, please raise an issueand let us know! This is a fun, safe environment - don't worry if you're a GitHub newbie! :heart:
+Here are some resources to get you started! If you find any challenges from this project are not properly documented or are unclear, please raise an issue and let us know! This is a fun, safe environment - don't worry if you're a GitHub newbie! :heart:
 
 * [Quick Start Guide](QUICK_START.md)
 * [Rubrik API Documentation](https://github.com/rubrikinc/api-documentation)

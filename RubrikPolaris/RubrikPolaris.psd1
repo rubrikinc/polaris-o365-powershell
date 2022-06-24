@@ -12,7 +12,7 @@
 RootModule = 'RubrikPolaris.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0'
+ModuleVersion = '1.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -88,6 +88,7 @@ FunctionsToExport = @(
     'Restore-PolarisM365Exchange',
     'Get-PolarisM365ExchangeSnapshot'
     'Get-PolarisM365OneDrive'
+    'Remove-EnterpriseApplication'
 
 
 )

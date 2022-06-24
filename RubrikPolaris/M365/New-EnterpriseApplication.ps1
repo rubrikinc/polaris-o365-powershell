@@ -173,7 +173,7 @@ function New-EnterpriseApplication() {
 
         $convertedCertFileName = "RubrikTempConvertedFileCert.crt"
         $openSSLVersion = openssl version
-        $supportWindowsVersion = "OpenSSL 1.1.1n  15 Mar 2022"
+        $supportWindowsVersion = "OpenSSL 1.1.1p  21 Jun 2022"
 
         if ($IsWindows){
             if ($openSSLVersion -ne $supportWindowsVersion){
@@ -489,9 +489,15 @@ function New-EnterpriseApplication() {
         if ($app.DataSource -ne "SharePoint"){
             $certRawData = ""
             $pemRawData = ""
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionName: `$o365SubscriptionName}"
         } else {
             $certRawData = $app.CertRawDataBase64
             $pemRawData = $app.PemRawDataBase64
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionName: `$o365SubscriptionName, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey}"
+
+
         }
 
         $payload = @{
@@ -506,8 +512,8 @@ function New-EnterpriseApplication() {
 
 
             };
-            "query" = "mutation AddCustomerO365AppMutation(`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!) {
-                insertCustomerO365App(o365AppType: `$o365AppType, o365AppClientId: `$o365AppClientId, o365AppClientSecret: `$o365AppClientSecret, o365SubscriptionName: `$o365SubscriptionName, o365Base64AppCertificate: `$o365Base64AppCertificate, o365Base64AppPrivateKey: `$o365Base64AppPrivateKey) {
+            "query" = "mutation AddCustomerO365AppMutation($gqlQueryArgumentType) {
+                insertCustomerO365App($gqlInput) {
                     success
                 }
             }";
