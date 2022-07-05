@@ -12,7 +12,7 @@
 RootModule = 'RubrikPolaris.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1'
+ModuleVersion = '1.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -33,7 +33,7 @@ Copyright = '(c) Rubrik. All rights reserved.'
 Description = "This is a community project that provides a PowerShell module for managing and monitoring Rubrik's Polaris platform."
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '5.1'
+PowerShellVersion = '6.0'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -51,7 +51,7 @@ DotNetFrameworkVersion = '4.7.2'
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
-# RequiredModules = @()
+RequiredModules = @(@{ModuleName = 'Microsoft.Graph'; ModuleVersion = "1.8.0"})
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()

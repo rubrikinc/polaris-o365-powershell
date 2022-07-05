@@ -8,18 +8,23 @@ their current SLA assignment and change those SLA assignments.
 
 ## :hammer: Installation
 
-See [Quick Start Guide](QUICK_START.md) for installation and usage instructions.
+```powershell
+Import-Module ./RubrikPolaris/RubrikPolaris.psd1 
+```
+
+Additional information can be found in the [Quick Start Guide](QUICK_START.md).
+
 
 ### Requirements
 
 * PowerShell v6.0 or greater
-* When creating SharePoint Enterprise Applications with the `New-EnterpriseApplication` cmdlet, the script must be run as an administrator and OpenSSL must be installed. When running on Windows, only [openssl-3.0.2](https://slproweb.com/download/Win64OpenSSL-3_0_2.exe) is supported.
+* [Microsoft Graph PowerShell SDK](https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0) (`Install-Module Microsoft.Graph`) v1.8.0 or later
+* When creating SharePoint Enterprise Applications with the `New-EnterpriseApplication` cmdlet, the script must be run as an administrator and the following dependencies must be installed:
+    * OpenSSL. When running on Windows, only [openssl-1.1.1](https://slproweb.com/products/Win32OpenSSL.html) is supported.
 
 ## :mag: Example
 
 See [Quick Start Guide](QUICK_START.md) for examples.
-
-
 
 ## :blue_book: Documentation
 

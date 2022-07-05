@@ -173,11 +173,11 @@ function New-EnterpriseApplication() {
 
         $convertedCertFileName = "RubrikTempConvertedFileCert.crt"
         $openSSLVersion = openssl version
-        $supportWindowsVersion = "OpenSSL 1.1.1p  21 Jun 2022"
+        $supportWindowsVersion = "OpenSSL 1.1.1"
 
         if ($IsWindows){
-            if ($openSSLVersion -ne $supportWindowsVersion){
-                throw "The SharePoint Enterprise Application creation process requires OpenSSL 1.1.1n 15 Mar 2022. Please download (https://slproweb.com/download/Win64OpenSSL-1_1_1n.exe) and try again."
+            if ($openSSLVersion -match $supportWindowsVersion){
+                throw "The SharePoint Enterprise Application creation process requires OpenSSL v1.1.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
             }
         } 
 
