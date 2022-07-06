@@ -40,10 +40,15 @@ function New-EnterpriseApplication() {
         [String]$DataSource,
         [Parameter(Mandatory = $False)]
         [Int]$Count,
+        [Int]$ExpirationInYears = 200,
+        [Parameter(Mandatory = $False)]
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
+    if ($ExpirationInYears -le 0){
+        throw "The ExpirationInYears argument must be greater than 0."
+    }
 
     # Validate the required 'Microsoft.Graph' module is installed
     # and provide a user friendly message when it's not.
@@ -103,8 +108,9 @@ function New-EnterpriseApplication() {
 
     $passwordcred = @{
         "displayName" = $applicationName[$DataSource]
+        "endDateTime" = Get-Date (Get-Date).ToUniversalTime().AddYears($ExpirationInYears) -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
     }
-    
+
     # API Service Principal IDs
     $grapApiAppId = "00000003-0000-0000-c000-000000000000"
     $ewsApiAppId = "00000002-0000-0ff1-ce00-000000000000"
@@ -169,14 +175,14 @@ function New-EnterpriseApplication() {
         $privateKeyFileName = "RubrikTempPrivateKey.pem"
         $certFileName = "RubrikTempCert.crt"
         $CertSubject = "/O=Rubrik"
-        $CertExpireDays = 3650
+        $CertExpireDays = $ExpirationInYears * 365
 
         $convertedCertFileName = "RubrikTempConvertedFileCert.crt"
         $openSSLVersion = openssl version
         $supportWindowsVersion = "OpenSSL 1.1.1"
 
         if ($IsWindows){
-            if ($openSSLVersion -match $supportWindowsVersion){
+            if ($openSSLVersion -notmatch $supportWindowsVersion){
                 throw "The SharePoint Enterprise Application creation process requires OpenSSL v1.1.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
             }
         } 
