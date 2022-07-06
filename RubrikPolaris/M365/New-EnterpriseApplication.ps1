@@ -3,15 +3,18 @@ function New-EnterpriseApplication() {
     <#
     .SYNOPSIS
 
-    (In Beta) Create a new Enterprise Application and then add to Rubrik.
+   Create a new Enterprise Application in Microsoft 365 and then adds to Rubrik.
 
     .PARAMETER DataSource
     The type of Enterprise Application you wish to created. Valid values are: Exchange, SharePoint, OneDrive, and FirstFull. When FirstFull is selected, the maximum number of Enterprise Applications Rubrik can load balance across for
     every default deployment will be created. This includes SharePoint, OneDrive and Exchange.
 
+    .PARAMETER ExpirationInYears
+    The number of years in which the Enterprise Application will be valid for before expiring. The default value is 200.
+
     .DESCRIPTION
 
-    (In Beta) Connect to Microsoft 365 and created a new Enterprise Application. Once created, add the Enterprise Application to Rubrik. 
+    Connect to Microsoft 365 and created a new Enterprise Application. Once created, add the Enterprise Application to Rubrik. 
     The Microsoft Graph "Application.ReadWrite.All" and "AppRoleAssignment.ReadWrite.All" permissions are required to create an Enterprise Application.
 .
     
