@@ -200,7 +200,7 @@ function New-EnterpriseApplication() {
     } 
 
     Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'Application.ReadWrite.All' and 'AppRoleAssignment.ReadWrite.All' Scope."
-    Connect-Graph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All" -ErrorAction Stop | Out-Null
+    Connect-Graph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All","User.Read" -ErrorAction Stop | Out-Null
     Write-Information -Message "Info: Successfully authenticated the Microsoft Graph API."
 
     foreach ($source in $toCreateDetails.GetEnumerator()) {
