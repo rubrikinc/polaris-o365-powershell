@@ -55,7 +55,7 @@ function Get-PolarisSLA() {
         "operationName" = "SLAList";
         "variables"     = @{"first" = 20; "name" = $Name };
         "query"         = "query SLAList(`$after: String, `$first: Int, `$name: String) {
-            globalSlaConnection(after: `$after, first: `$first, filter: [{field: NAME, text: `$name}]) {
+            slaDomains(after: `$after, first: `$first, filter: [{field: NAME, text: `$name}]) {
                 edges {
                     node {
                         id
@@ -75,7 +75,7 @@ function Get-PolarisSLA() {
 
     $sla_detail = @()
 
-    foreach ($edge in $response.data.globalSlaConnection.edges) {
+    foreach ($edge in $response.data.slaDomains.edges) {
         $row = '' | Select-Object name, id, description
         $row.name = $edge.node.name
         $row.id = $edge.node.id
