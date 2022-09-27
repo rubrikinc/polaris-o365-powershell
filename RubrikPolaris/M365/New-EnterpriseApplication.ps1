@@ -45,6 +45,8 @@ function New-EnterpriseApplication() {
         [Int]$Count,
         [Int]$ExpirationInYears = 200,
         [Parameter(Mandatory = $False)]
+        [String]$SubscriptionName,
+        [Parameter(Mandatory = $False)]
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
@@ -73,19 +75,34 @@ function New-EnterpriseApplication() {
 
     $endpoint = $PolarisURL + '/api/graphql'
 
-    $payload = @{
-        "operationName" = "O365OrgCountAndComplianceQuery";
-        "query" = "query O365OrgCountAndComplianceQuery {
-            o365Orgs {
-              count
-            }
-          }";
-    }       
+    $configuredSubscriptionsOnRubrik = Get-PolarisM365Subscriptions
+    $numberOfSubscriptionsCOnfigured = $configuredSubscriptionsOnRubrik.Count
 
     Write-Information -Message "Info: Verifing a Microsoft 365 subscription has been set up on Rubrik."
-    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-    if ($response.data.o365Orgs.count -lt 1) {
+    if ($numberOfSubscriptionsCOnfigured -eq 0){
         throw "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
+    } elseif ($numberOfSubscriptionsCOnfigured -eq 1){
+        $subscriptionId = $configuredSubscriptionsOnRubrik.subscriptionId  
+    } else {
+
+        if ($PSBoundParameters.ContainsKey("SubscriptionName") -eq $false){
+            throw "The 'SubscriptionName'parameter must be specified when multiple Microsoft 365 subscriptions are being protected."
+        }
+
+        foreach ($sub in $configuredSubscriptionsOnRubrik){
+            if ($sub.name -eq $subscriptionName) {
+                $subscriptionId = $sub.subscriptionId
+                Write-Output $subscriptionId
+                break
+                
+            }     
+        }
+
+        if ($subscriptionId -eq $null){
+            throw "The '$($SubscriptionName)' Subscription has not been set up on Rubrik."
+        }
+
+        
     }
 
     $o365AppType = @{
@@ -104,7 +121,7 @@ function New-EnterpriseApplication() {
 
     $applicationName = @{
         "Exchange"  = "Rubrik Exchange - " + $($polarisAccountName)
-        "OneDrive" = "Rubrik OneDrive - $($polarisAccountName)"
+        "OneDrive" = "Rubrik CA - $($polarisAccountName)"
         "SharePoint" = "Rubrik SharePoint - $($polarisAccountName)"
     }
 
@@ -470,22 +487,6 @@ function New-EnterpriseApplication() {
         }
     }
 
-    try {
-        Write-Information -Message "Info: Getting the Microsoft 365 Subscription name."
-
-        $m365SubscriptionName = (Get-MgOrganization -InformationAction "SilentlyContinue").DisplayName 
-    }
-    catch {
-        
-        while ($true) {
-            Start-Sleep 5
-            $m365SubscriptionName = (Get-MgOrganization -InformationAction "SilentlyContinue").DisplayName 
-            if ($m365SubscriptionName){
-                break
-            } 
-        }
-    }
-
     Write-Information -Message "Info: Disconnecting from the Microsoft Graph API"
 
     Disconnect-Graph
@@ -498,13 +499,13 @@ function New-EnterpriseApplication() {
         if ($app.DataSource -ne "SharePoint"){
             $certRawData = ""
             $pemRawData = ""
-            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!"
-            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionName: `$o365SubscriptionName}"
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId}"
         } else {
             $certRawData = $app.CertRawDataBase64
             $pemRawData = $app.PemRawDataBase64
-            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionName: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!"
-            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionName: `$o365SubscriptionName, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey}"
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey}"
 
 
         }
@@ -515,7 +516,7 @@ function New-EnterpriseApplication() {
                 "o365AppType" = $o365AppType[$app.DataSource] ;
                 "o365AppClientId" = $app.AppId;
                 "o365AppClientSecret" = $app.Secret;
-                "o365SubscriptionName" = $m365SubscriptionName;
+                "o365SubscriptionId" = $subscriptionId;
                 "o365Base64AppCertificate" =  $certRawData;
                 "o365Base64AppPrivateKey" =  $pemRawData;
 

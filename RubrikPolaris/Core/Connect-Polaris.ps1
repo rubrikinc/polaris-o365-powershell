@@ -72,10 +72,15 @@ function Connect-Polaris() {
     $response = Invoke-RestMethod -Method POST -Uri $serviceAccountFile.access_token_uri -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
 
     Write-Verbose -Message "Creating the Rubrik Polaris Connection Global variable."
+
+    $polarisURL = $serviceAccountFile.access_token_uri.Replace("/api/client_token", "")
     $global:rubrikPolarisConnection = @{
         accessToken      = $response.access_token;
-        PolarisURL  = $serviceAccountFile.access_token_uri.Replace("/api/client_token", "")
+        PolarisURL  = $polarisURL
     }
+
+    Write-Information -Message "Info: Successfully connected to $polarisURL."
+
 
 }
 Export-ModuleMember -Function Connect-Polaris
