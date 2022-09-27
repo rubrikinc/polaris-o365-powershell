@@ -12,6 +12,9 @@ function New-EnterpriseApplication() {
     .PARAMETER ExpirationInYears
     The number of years in which the Enterprise Application will be valid for before expiring. The default value is 200.
 
+    .PARAMETER SubscriptionName
+    The name of the Microsoft 365 Subscription in the Rubrik where the Enterprise Applications shoudl be created. This is only required when multiple subscriptions have been set up.
+
     .DESCRIPTION
 
     Connect to Microsoft 365 and created a new Enterprise Application. Once created, add the Enterprise Application to Rubrik. 
