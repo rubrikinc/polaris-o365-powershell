@@ -6,6 +6,16 @@
 * Microsoft Graph PowerShell Module. Run the following command to install: `Install-Module Microsoft.Graph`
 * When creating SharePoint Enterprise Applications [OpenSSL v1.1.1](https://slproweb.com/products/Win32OpenSSL.html) and Windows is also required.
 
+
+## Rubrik Module
+
+Download the Rubrik PowerShell Module to your local environment and extrat the Zip file.
+
+[![Download zip](https://user-images.githubusercontent.com/8610203/145614905-a6d64f3a-adab-4c3f-9bf9-ffa4fdf6793f.png "Download zip")](https://github.com/rubrikinc/polaris-o365-powershell/archive/refs/heads/master.zip)
+
+1. Open PowerShell and navigate to the extracted `polaris-o365-powershell-master` folder.
+2. Install the module by running `Import-Module ./RubrikPolaris/RubrikPolaris.psd1`
+
 ## Rubrik API Service Account
 
 The PowerShell module will leverage a Rubrik API Service Account to connect the Enterprise Applications to Rubrik after they are created in Microsoft 365.
@@ -23,15 +33,6 @@ The PowerShell module will leverage a Rubrik API Service Account to connect the 
 11. Click Done.
 12. Create a hidden folder named ".rubrik" in your home directory by running the following CLI command: `mkdir ~/.rubrik`
 13. Move the downloaded polaris-service-account.json to the `~/.rubrik` directory
-
-## Rubrik Module
-
-Download the Rubrik PowerShell Module to your local environment and extrat the Zip file.
-
-[![Download zip](https://user-images.githubusercontent.com/8610203/145614905-a6d64f3a-adab-4c3f-9bf9-ffa4fdf6793f.png "Download zip")](https://github.com/rubrikinc/polaris-o365-powershell/archive/refs/heads/master.zip)
-
-1. Open PowerShell and navigate to the extracted `polaris-o365-powershell-master` folder.
-2. Install the module by running `Import-Module ./RubrikPolaris/RubrikPolaris.psd1`
 
 # Creating the Enterprise Application
 
