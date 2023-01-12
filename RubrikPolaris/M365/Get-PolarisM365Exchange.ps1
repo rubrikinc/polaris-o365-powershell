@@ -62,7 +62,7 @@ function Get-PolarisM365Exchange() {
 
     $payload = @{
         "operationName" = "O365MailboxListQuery";
-        "query" = "query O365MailboxListQuery(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        "query" = "query O365MailboxListQuery(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: SortOrder) {
             o365Mailboxes(o365OrgId: `$orgId, after: `$after, first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder) {
                 edges {
                     node {
