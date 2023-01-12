@@ -67,8 +67,8 @@ function Get-PolarisM365Mailbox() {
     $node_array = @()
 
     $payload = @{
-        "operationName" = "O365MailboxList";
-        "query"         = "query O365MailboxList(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        "operationName" = "O365MailboxListQuery";
+        "query"         = "query O365MailboxListQuery(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: SortOrder) {
             o365Mailboxes(o365OrgId: `$orgId, after: `$after, first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder) {
                 edges {
                     node {
@@ -106,6 +106,7 @@ function Get-PolarisM365Mailbox() {
             "sortOrder" = "ASC";
         }
     }
+
     $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
     $node_array += $response.data.o365Mailboxes.edges
     # get all pages of results
