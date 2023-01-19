@@ -60,7 +60,7 @@ function Get-PolarisM365OneDrive() {
 
     $payload = @{
         "operationName" = "O365OnedriveList";
-        "query" = "query O365OnedriveList(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: HierarchySortOrder) {
+        "query" = "query O365OnedriveList(`$first: Int!, `$after: String, `$orgId: UUID!, `$filter: [Filter!]!, `$sortBy: HierarchySortByField, `$sortOrder: SortOrder) {
             o365Onedrives(o365OrgId: `$orgId, after: `$after, first: `$first, filter: `$filter, sortBy: `$sortBy, sortOrder: `$sortOrder) {
                 edges {
                     node {
