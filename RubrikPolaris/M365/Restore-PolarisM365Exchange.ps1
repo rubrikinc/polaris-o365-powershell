@@ -6,7 +6,7 @@ function Restore-PolarisM365Exchange() {
     .DESCRIPTION
     Restore a Users entire Exchange based on the latest backup.
 
-    .PARAMETER Email
+    .PARAMETER Emails
     The Email address of the Exchange user you wish to restore. 
 
     .PARAMETER ExchangeId
@@ -63,11 +63,15 @@ function Restore-PolarisM365Exchange() {
                 # Warm the Search container on the backend to improve API performance below
                 $warmPayload = @{
                     "operationName" = "WarmO365ObjectSearchCacheMutation";
-                    "query" = "mutation WarmO365ObjectSearchCacheMutation(`$snappableId: UUID!) {
-                                warmSearchCache(snappableFid: `$snappableId)
+                    "query" = "mutation WarmO365ObjectSearchCacheMutation(`$input: WarmSearchCacheInput!) {
+                        warmSearchCache(input: `$input)
+                                
                     }";
                     "variables" = @{
-                        "snappableId" = $ExchangeUser.id;
+                        "input" = @{
+                            "workloadFid" = $ExchangeUser.id;
+                        }
+                      
                     }
         
                 }
@@ -146,8 +150,8 @@ function Restore-PolarisM365Exchange() {
             #TODO: prevent cannot index into a null array.
             $payload = @{
                 "operationName" = "O365RestoreMailboxMutation";
-                "query" = "mutation O365RestoreMailboxMutation(`$orgId: UUID, `$mailboxId: UUID!, `$restoreConfigs: [RestoreObjectConfig!]!) {
-                    restoreO365Mailbox(restoreConfig: {mailboxUUID: `$mailboxId, restoreConfigs: `$restoreConfigs, orgUuid: `$orgId}) {
+                "query" = "mutation O365RestoreMailboxMutation(`$orgId: UUID, `$mailboxId: UUID!, `$restoreConfigs: [RestoreObjectConfig!]!, `$actionType: O365RestoreActionType!) {
+                    restoreO365Mailbox(restoreConfig: {mailboxUuid: `$mailboxId, restoreConfigs: `$restoreConfigs, orgUuid: `$orgId, actionType: `$actionType}) {
                       taskchainId
                     }
                   }
@@ -162,10 +166,12 @@ function Restore-PolarisM365Exchange() {
         
                         }
                     );
+                    "actionType" = "RESTORE_SNAPPABLE";
                   
                 }
         
             }
+
            
             $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
             $taskchainIds += $response.data.restoreO365Mailbox.taskchainId

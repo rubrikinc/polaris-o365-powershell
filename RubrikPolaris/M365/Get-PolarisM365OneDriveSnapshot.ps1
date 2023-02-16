@@ -47,7 +47,7 @@ function Get-PolarisM365OneDriveSnapshot() {
               newestSnapshot {
                 id
               }
-              snapshotConnection(first: 1, sortOrder: Desc) {
+              snapshotConnection(first: 1, sortOrder: DESC) {
                 nodes {
                   sequenceNumber
                   isIndexed

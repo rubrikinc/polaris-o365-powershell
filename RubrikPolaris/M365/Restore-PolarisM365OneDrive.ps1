@@ -71,13 +71,17 @@ function Restore-PolarisM365OneDrive() {
             # Warm the Search container on the backend to improve API performance below
             $warmPayload = @{
                 "operationName" = "WarmO365ObjectSearchCacheMutation";
-                "query" = "mutation WarmO365ObjectSearchCacheMutation(`$snappableId: UUID!) {
-                            warmSearchCache(snappableFid: `$snappableId)
+                "query" = "mutation WarmO365ObjectSearchCacheMutation(`$input: WarmSearchCacheInput!) {
+                    warmSearchCache(input: `$input)
+                            
                 }";
                 "variables" = @{
-                    "snappableId" = $oneDriveUser.id;
+                    "input" = @{
+                        "workloadFid" = $oneDriveUser.id;
+                    }
+                  
                 }
-    
+           
             }
     
             Invoke-RestMethod -Method POST -Uri $endpoint -Body $($warmPayload | ConvertTo-JSON -Depth 100) -Headers $headers | Out-Null
@@ -102,29 +106,35 @@ function Restore-PolarisM365OneDrive() {
 
         $payload = @{
             "operationName" = "O365RestoreOnedriveMutation";
-            "query" = "mutation O365RestoreOnedriveMutation(`$filesToRestore: [FileInfo!]!, `$foldersToRestore: [FolderInfo!]!, `$destOnedriveUUID: UUID!, `$sourceOnedriveUUID: UUID!, `$restoreFolderPath: String!, `$actionType: O365RestoreActionType!) {
-                restoreO365Snappable(snappableType: ONEDRIVE, sourceSnappableUUID: `$sourceOnedriveUUID, destSnappableUUID: `$destOnedriveUUID, snappableRestoreConfig: {OneDriveRestoreConfig: {FilesToRestore: `$filesToRestore, FoldersToRestore: `$foldersToRestore, RestoreFolderPath: `$restoreFolderPath}}, actionType: `$actionType) {
-                  taskchainId
-                }
-              }";
-            "variables" = @{
-                "foldersToRestore" = @(
-                    @{
-                        "FolderID" = "root";
-                        "FolderName" = "OneDrive";
-                        "SnapshotID" = $snapshot.lastSnapshotId;
-                        "FolderSize" = 0;
-                        "SnapshotNum" = [int]$snapshot.lastSnapshotStorageLocation;
-    
-                    }
-                );
-                "filesToRestore" = @();
-                "restoreFolderPath" = "";
-                "sourceOnedriveUUID" = $oId ;
-                "destOnedriveUUID" = $oId ;
-                "actionType" = $actionType;
+
+            "query" = "mutation O365RestoreOnedriveMutation(`$input: RestoreO365SnappableInput!){
+                restoreO365Snappable(input: `$input) {
+                    taskchainId
             }
+            }";
+            "variables" = @{
+                "input" =@{
+                    "snappableType" = "ONEDRIVE"; 
+                    "restoreConfig" = @{
+                        "OneDriveRestoreConfig" = @{
+                            "filesToRestore" = @(); 
+                            "foldersToRestore" = @{
+                                "folderId" = "root"; 
+                                "folderName" = "OneDrive"; 
+                                "folderSize" = 0; 
+                                "snapshotId" = $snapshot.lastSnapshotId;
+                                "snapshotNum" = [int]$snapshot.lastSnapshotStorageLocation;
     
+                            }; 
+                            "restoreFolderPath" = "";
+                        }
+                    }; 
+                    "sourceSnappableUuid" = $oId
+                    "destinationSnappableUuid" = $oId 
+                    "actionType" = "RESTORE_SNAPPABLE"
+                }
+            }
+        
         }
 
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
