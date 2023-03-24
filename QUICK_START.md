@@ -41,6 +41,9 @@ The following commands are available in the module:
 * `Get-PolarisJob`
 * `Get-PolarisM365EnterpriseApplication`
 * `New-EnterpriseApplication`
+* `Start-MassRecovery`
+* `Stop-MassRecovery`
+* `Get-MassRecoveryProgress`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
 
