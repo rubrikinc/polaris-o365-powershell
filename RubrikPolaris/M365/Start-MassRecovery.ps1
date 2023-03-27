@@ -95,8 +95,8 @@ function Start-MassRecovery() {
         };
         "query" = "mutation StartBulkRecovery(`$input: StartBulkRecoveryInput!) {
             startBulkRecovery(input: `$input) {
-              massRecoveryInstanceID: bulkRecoveryInstanceId
-              taskchainID: taskchainId
+              bulkRecoveryInstanceId
+              taskchainId
               jobId
               error
             }
@@ -115,8 +115,8 @@ function Start-MassRecovery() {
         return
     }
 
-    $row = '' | Select-Object bulkRecoveryInstanceID,taskchainID, jobID, error
-    $row.bulkRecoveryInstanceId = $response.data.startBulkRecovery.bulkRecoveryInstanceId
+    $row = '' | Select-Object massRecoveryInstanceID,taskchainID, jobID, error
+    $row.massRecoveryInstanceId = $response.data.startBulkRecovery.bulkRecoveryInstanceId
     $row.taskchainID = $response.data.startBulkRecovery.taskchainId
     $row.jobID = $response.data.startBulkRecovery.jobId
     $row.error = $response.data.startBulkRecovery.error
