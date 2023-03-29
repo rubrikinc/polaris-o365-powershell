@@ -100,12 +100,16 @@ function Get-MassRecoveryProgress() {
     $respProgress.endTime = getDateTime($respProgress.endTime)
     $respProgress.elapsedTime = getTime($respProgress.elapsedTime)
 
-    if ($respProgress.status -eq "Canceled") {
+    if ($respProgress.status -eq "CANCELED") {
       $respProgress.failureReason = ""
       $cancelObjects = $respProgress.totalObjects - $respProgress.inProgressObjects - 
         $respProgress.succeededObjects - $respProgress.failedObjects
       
       $respProgress | Add-Member NoteProperty canceledObjects($cancelObjects)
+    }
+
+    if ($respProgress.status -ne "IN_PROGRESS") {
+        $respProgress.PSObject.Properties.Remove('currentStep')
     }
 
     $respProgress.failureActionType = "IGNORE_AND_CONTINUE"
