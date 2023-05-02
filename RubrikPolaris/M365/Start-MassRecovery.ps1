@@ -51,9 +51,36 @@ function Start-MassRecovery() {
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
-    if ($WorkloadType -ne "OneDrive") {
-        Write-Host "Error starting mass recovery $Name. The error response is 'Only WorkloadType as OneDrive is supported'."
+    if (($WorkloadType -ne "OneDrive") -and ($WorkloadType -ne "Exchange")) {
+        Write-Host "Error starting mass recovery $Name. The error response is 'Only WorkloadType as OneDrive or Exchange is supported'."
         return
+    }
+
+    $snappableToSubSnappableMap = @{
+        "OneDrive" = @(
+            @{
+                SnappableType = "O365_ONEDRIVE";
+                SubSnappableType = "NONE";
+                NameSuffix="_OneDrive";
+            }
+        );
+        "Exchange" = @(
+            @{
+                SnappableType = "O365_EXCHANGE";
+                SubSnappableType = "O365_MAILBOX";
+                NameSuffix="_Mailbox";
+            };
+            @{
+                SnappableType = "O365_EXCHANGE";
+                SubSnappableType = "O365_CALENDAR";
+                NameSuffix="_Calendar";
+            };
+            @{
+                SnappableType = "O365_EXCHANGE";
+                SubSnappableType = "O365_CONTACT";
+                NameSuffix="_Contact";
+            };
+        );
     }
 
     $headers = @{
@@ -63,64 +90,66 @@ function Start-MassRecovery() {
     }
 
     $endpoint = $PolarisURL + '/api/graphql'
-
-    Write-Information -Message "Starting the mass restoration process for OneDrive account(s) under AD Group ID $AdGroupId ."
-
     $rpMilliseconds = ([DateTimeOffset]$RecoveryPoint).ToUnixTimeMilliseconds()
 
-    Write-Information -Message "rp Milliseconds: $rpMilliseconds"
-
-    $payload = @{
-        "operationName" = "StartBulkRecovery";
-        "variables"     = @{
-            "input" = @{
-                "definition" = @{
-                    "name" = $Name;
-                    "adGroupSelectorWithRecoverySpec" =  @{
-                        "baseInfo" = @{
-                            "snappableType" = "O365_ONEDRIVE";
-                            "recoverySpec" = @{
-                                "recoveryPoint" = $rpMilliseconds;
-                                "srcSubscriptionName" = $SubscriptionName;
-                                "targetSubscriptionName" = $SubscriptionName;
-                            }
+    Write-Information -Message "Starting the mass restoration process for $WorkloadType account(s) under AD Group ID $AdGroupId."
+    $snappableToSubSnappableMap[$WorkloadType] | ForEach-Object -Process {
+        $recoveryName=$Name+$_.NameSuffix
+        $payload = @{
+            "operationName" = "StartBulkRecovery";
+            "variables"     = @{
+                "input" = @{
+                    "definition" = @{
+                        "name" = $recoveryName;
+                        "adGroupSelectorWithRecoverySpec" =  @{
+                            "baseInfo" = @{
+                                "snappableType" = $_.SnappableType;
+                                "subSnappableType" = $_.SubSnappableType;
+                                "recoverySpec" = @{
+                                    "recoveryPoint" = $rpMilliseconds;
+                                    "srcSubscriptionName" = $SubscriptionName;
+                                    "targetSubscriptionName" = $SubscriptionName;
+                                }
+                            };
+                            "adGroupId"= $AdGroupId;
                         };
-                        "adGroupId"= $AdGroupId;
+                        "recoveryMode" = "AD_HOC";
+                        "failureAction" = "IGNORE_AND_CONTINUE";
+                        "recoveryDomain" = "O365";
                     };
-                    "recoveryMode" = "AD_HOC";
-                    "failureAction" = "IGNORE_AND_CONTINUE";
-                    "recoveryDomain" = "O365";
                 };
             };
-        };
-        "query" = "mutation StartBulkRecovery(`$input: StartBulkRecoveryInput!) {
-            startBulkRecovery(input: `$input) {
-              bulkRecoveryInstanceId
-              taskchainId
-              jobId
-              error
-            }
-          }";
+            "query" = "mutation StartBulkRecovery(`$input: StartBulkRecoveryInput!) {
+                startBulkRecovery(input: `$input) {
+                  bulkRecoveryInstanceId
+                  taskchainId
+                  jobId
+                  error
+                }
+              }";
+        }
+    
+        $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
+        if ($null -eq $response) {
+            return 
+        }
+        if ($response.errors) {
+            $response = $response.errors[0].message
+            Write-Host "Error starting mass recovery $recoveryName. The error response is $($response).`n"
+            return
+        }
+       
+        $row = '' | Select-Object massRecoveryInstanceID,taskchainID, jobID, error
+        $row.massRecoveryInstanceId = $response.data.startBulkRecovery.bulkRecoveryInstanceId
+        $row.taskchainID = $response.data.startBulkRecovery.taskchainId
+        $row.jobID = $response.data.startBulkRecovery.jobId
+        $row.error = $response.data.startBulkRecovery.error
+
+        Write-Host "Started mass recovery $recoveryName with the following details:"
+        Write-Host $row
+        Write-Host "`n"
     }
 
-    $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
-
-    if ($null -eq $response) {
-        return 
-    }
-  
-    if ($response.errors) {
-        $response = $response.errors[0].message
-        Write-Host "Error starting mass recovery $Name. The error response is $($response)."
-        return
-    }
-
-    $row = '' | Select-Object massRecoveryInstanceID,taskchainID, jobID, error
-    $row.massRecoveryInstanceId = $response.data.startBulkRecovery.bulkRecoveryInstanceId
-    $row.taskchainID = $response.data.startBulkRecovery.taskchainId
-    $row.jobID = $response.data.startBulkRecovery.jobId
-    $row.error = $response.data.startBulkRecovery.error
-
-    return $row
+    return
 }
 Export-ModuleMember -Function Start-MassRecovery
