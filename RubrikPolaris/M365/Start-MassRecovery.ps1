@@ -20,6 +20,9 @@ function Start-MassRecovery() {
     .PARAMETER AdGroupId
     The ID of the AD Group you wish to mass restore.
 
+    .PARAMETER ConfiguredGroupName
+    The name of the Configured Group you wish to mass restore.
+
     .PARAMETER WorkloadType
     The type of workload you wish to mass restore, only "OneDrive" is supported
     right now.
@@ -34,6 +37,9 @@ function Start-MassRecovery() {
     .EXAMPLE
     PS> Start-MassRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId
         -WorkloadType $workloadType
+
+    PS> Start-MassRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName
+    -WorkloadType $workloadType
     #>
 
     param(
@@ -43,16 +49,24 @@ function Start-MassRecovery() {
         [DateTime]$RecoveryPoint,
         [Parameter(Mandatory=$True)]
         [String]$SubscriptionName,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory=$False)]
         [String]$AdGroupId,
+        [Parameter(Mandatory=$False)]
+        [String]$ConfiguredGroupName,
         [Parameter(Mandatory=$True)]
+        [ValidateSet("OneDrive", "Exchange", "Sharepoint")]
         [String]$WorkloadType,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
-    if (($WorkloadType -ne "OneDrive") -and ($WorkloadType -ne "Exchange")) {
-        Write-Host "Error starting mass recovery $Name. The error response is 'Only WorkloadType as OneDrive or Exchange is supported'."
+    if ((($WorkloadType -eq "OneDrive") -or ($WorkloadType -eq "Exchange")) -and ($AdGroupId -eq "")) {
+        Write-Host "Error starting mass recovery $recoveryName. AdGroupId should not be empty for OneDrive or Exchange workload type.`n"
+        return
+    }
+
+    if (($WorkloadType -eq "Sharepoint") -and ($ConfiguredGroupName -eq "")) {
+        Write-Host "Error starting mass recovery $recoveryName. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
         return
     }
 
@@ -78,8 +92,15 @@ function Start-MassRecovery() {
             @{
                 SnappableType = "O365_EXCHANGE";
                 SubSnappableType = "O365_CONTACT";
-                NameSuffix="_Contact";
+                NameSuffix="_Contacts";
             };
+        );
+        "Sharepoint" = @(
+            @{
+                SnappableType = "O365_SHAREPOINT";
+                SubSnappableType = "NONE";
+                NameSuffix="_Sharepoint";
+            }
         );
     }
 
@@ -95,24 +116,36 @@ function Start-MassRecovery() {
     Write-Information -Message "Starting the mass restoration process for $WorkloadType account(s) under AD Group ID $AdGroupId."
     $snappableToSubSnappableMap[$WorkloadType] | ForEach-Object -Process {
         $recoveryName=$Name+$_.NameSuffix
+        $baseInfo = @{
+            "snappableType" = $_.SnappableType;
+            "subSnappableType" = $_.SubSnappableType;
+            "recoverySpec" = @{
+                "recoveryPoint" = $rpMilliseconds;
+                "srcSubscriptionName" = $SubscriptionName;
+                "targetSubscriptionName" = $SubscriptionName;
+            }
+        }
+
+        if ($WorkloadType -eq "Sharepoint") {
+            $o365GroupSelectorWithRecoverySpec = @{
+                "baseInfo" = $baseInfo;
+                "groupName" = $ConfiguredGroupName;
+            }
+        } else {
+            # right now it is implicit that other workload types would be OneDrive, Exchange
+            $o365GroupSelectorWithRecoverySpec = @{
+                "baseInfo" = $baseInfo;
+                "adGroupId" = $AdGroupId;
+            }
+        }
+
         $payload = @{
             "operationName" = "StartBulkRecovery";
             "variables"     = @{
                 "input" = @{
                     "definition" = @{
                         "name" = $recoveryName;
-                        "adGroupSelectorWithRecoverySpec" =  @{
-                            "baseInfo" = @{
-                                "snappableType" = $_.SnappableType;
-                                "subSnappableType" = $_.SubSnappableType;
-                                "recoverySpec" = @{
-                                    "recoveryPoint" = $rpMilliseconds;
-                                    "srcSubscriptionName" = $SubscriptionName;
-                                    "targetSubscriptionName" = $SubscriptionName;
-                                }
-                            };
-                            "adGroupId"= $AdGroupId;
-                        };
+                        "o365GroupSelectorWithRecoverySpec" = $o365GroupSelectorWithRecoverySpec;
                         "recoveryMode" = "AD_HOC";
                         "failureAction" = "IGNORE_AND_CONTINUE";
                         "recoveryDomain" = "O365";

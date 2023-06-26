@@ -54,6 +54,7 @@ function Get-MassRecoveryProgress() {
         "query"         = "query BulkRecoveryProgress(`$input: BulkRecoveryProgressInput!) {
             bulkRecoveryProgress(input: `$input) {
               recoveryPlanName
+              createTime
               startTime
               endTime
               elapsedTime
@@ -61,6 +62,7 @@ function Get-MassRecoveryProgress() {
               failedObjects
               succeededObjects
               inProgressObjects
+              objectsWithoutSnapshot
               totalObjects
               groupsProcessed
               totalGroups
@@ -102,9 +104,6 @@ function Get-MassRecoveryProgress() {
 
     if ($respProgress.status -eq "CANCELED") {
       $respProgress.failureReason = ""
-      $cancelObjects = $respProgress.totalObjects - $respProgress.inProgressObjects - 
-        $respProgress.succeededObjects - $respProgress.failedObjects
-      
       $respProgress | Add-Member NoteProperty canceledObjects($cancelObjects)
     }
 
@@ -130,7 +129,7 @@ function Get-MassRecoveryProgress() {
 
 function getDateTime($unixTimeStamp) {
   if ($null -eq $unixTimeStamp) {
-    return "null"
+    return ""
   }
 
   $epochStart = Get-Date 01.01.1970
