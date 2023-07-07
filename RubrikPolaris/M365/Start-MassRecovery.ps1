@@ -27,8 +27,9 @@ function Start-MassRecovery() {
     The type of workload you wish to mass restore, only "OneDrive" is supported
     right now.
 
-    .PARAMETER SubSnappableName
-    The sub snappable you wish to restore.
+    .PARAMETER SubWorkloadType
+    The type of sub workload you wish to restore. Only supported for "Exchange"
+    workload type, where sub workload types are "Calendar", "Contacts" and "Mailbox"
 
     .INPUTS
     None. You cannot pipe objects to Start-MassRecovery.
@@ -42,7 +43,7 @@ function Start-MassRecovery() {
         -WorkloadType $workloadType
 
     PS> Start-MassRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName
-    -WorkloadType $workloadType
+        -WorkloadType $workloadType
     #>
 
     param(
@@ -61,7 +62,7 @@ function Start-MassRecovery() {
         [String]$WorkloadType,
         [Parameter(Mandatory=$False)]
         [ValidateSet("Mailbox", "Calendar", "Contacts")]
-        [String]$SubSnappableName,
+        [String]$SubWorkloadType,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
@@ -76,8 +77,8 @@ function Start-MassRecovery() {
         return
     }
 
-    if (($WorkloadType -ne "Exchange") -and ($SubSnappableName -ne "")) {
-        Write-Host "Error starting mass recovery $Name. SubSnappableName should only be specified for Exchange workload type.`n"
+    if (($WorkloadType -ne "Exchange") -and ($SubWorkloadType -ne "")) {
+        Write-Host "Error starting mass recovery $Name. SubWorkloadType should only be specified for Exchange workload type.`n"
         return
     }
 
@@ -125,8 +126,11 @@ function Start-MassRecovery() {
     $rpMilliseconds = ([DateTimeOffset]$RecoveryPoint).ToUnixTimeMilliseconds()
 
     Write-Information -Message "Starting the mass restoration process for $WorkloadType account(s) under AD Group ID $AdGroupId."
+  
+    $subscriptionId = getSubscriptionId($SubscriptionName)
+  
     $snappableToSubSnappableMap[$WorkloadType] | Where-Object {
-        ($_.NameSuffix -eq $SubSnappableName) -or ($SubSnappableName -eq "")
+        ($_.NameSuffix -eq $SubWorkloadType) -or ($SubWorkloadType -eq "")
     } | ForEach-Object -Process {
         $recoveryName=$Name+"_"+$_.NameSuffix
         $baseInfo = @{
@@ -134,8 +138,8 @@ function Start-MassRecovery() {
             "subSnappableType" = $_.SubSnappableType;
             "recoverySpec" = @{
                 "recoveryPoint" = $rpMilliseconds;
-                "srcSubscriptionName" = $SubscriptionName;
-                "targetSubscriptionName" = $SubscriptionName;
+                "srcSubscriptionId" = $subscriptionId;
+                "targetSubscriptionId" = $subscriptionId;
             }
         }
 
