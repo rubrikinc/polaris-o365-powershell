@@ -27,6 +27,9 @@ function Start-MassRecovery() {
     The type of workload you wish to mass restore, only "OneDrive" is supported
     right now.
 
+    .PARAMETER SubSnappableName
+    The sub snappable you wish to restore.
+
     .INPUTS
     None. You cannot pipe objects to Start-MassRecovery.
    
@@ -56,17 +59,25 @@ function Start-MassRecovery() {
         [Parameter(Mandatory=$True)]
         [ValidateSet("OneDrive", "Exchange", "Sharepoint")]
         [String]$WorkloadType,
+        [Parameter(Mandatory=$False)]
+        [ValidateSet("Mailbox", "Calendar", "Contact")]
+        [String]$SubSnappableName,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
 
     if ((($WorkloadType -eq "OneDrive") -or ($WorkloadType -eq "Exchange")) -and ($AdGroupId -eq "")) {
-        Write-Host "Error starting mass recovery $recoveryName. AdGroupId should not be empty for OneDrive or Exchange workload type.`n"
+        Write-Host "Error starting mass recovery $Name. AdGroupId should not be empty for OneDrive or Exchange workload type.`n"
         return
     }
 
     if (($WorkloadType -eq "Sharepoint") -and ($ConfiguredGroupName -eq "")) {
-        Write-Host "Error starting mass recovery $recoveryName. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
+        Write-Host "Error starting mass recovery $Name. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
+        return
+    }
+
+    if (($WorkloadType -ne "Exchange") -and ($SubSnappableName -ne "")) {
+        Write-Host "Error starting mass recovery $Name. SubSnappableName should only be specified for Exchange workload type.`n"
         return
     }
 
@@ -75,31 +86,31 @@ function Start-MassRecovery() {
             @{
                 SnappableType = "O365_ONEDRIVE";
                 SubSnappableType = "NONE";
-                NameSuffix="_OneDrive";
+                NameSuffix="OneDrive";
             }
         );
         "Exchange" = @(
             @{
                 SnappableType = "O365_EXCHANGE";
                 SubSnappableType = "O365_MAILBOX";
-                NameSuffix="_Mailbox";
+                NameSuffix="Mailbox";
             };
             @{
                 SnappableType = "O365_EXCHANGE";
                 SubSnappableType = "O365_CALENDAR";
-                NameSuffix="_Calendar";
+                NameSuffix="Calendar";
             };
             @{
                 SnappableType = "O365_EXCHANGE";
                 SubSnappableType = "O365_CONTACT";
-                NameSuffix="_Contacts";
+                NameSuffix="Contacts";
             };
         );
         "Sharepoint" = @(
             @{
                 SnappableType = "O365_SHAREPOINT";
                 SubSnappableType = "NONE";
-                NameSuffix="_Sharepoint";
+                NameSuffix="Sharepoint";
             }
         );
     }
@@ -114,8 +125,10 @@ function Start-MassRecovery() {
     $rpMilliseconds = ([DateTimeOffset]$RecoveryPoint).ToUnixTimeMilliseconds()
 
     Write-Information -Message "Starting the mass restoration process for $WorkloadType account(s) under AD Group ID $AdGroupId."
-    $snappableToSubSnappableMap[$WorkloadType] | ForEach-Object -Process {
-        $recoveryName=$Name+$_.NameSuffix
+    $snappableToSubSnappableMap[$WorkloadType] | Where-Object {
+        ($_.NameSuffix -eq $SubSnappableName) -or ($SubSnappableName -eq "")
+    } | ForEach-Object -Process {
+        $recoveryName=$Name+"_"+$_.NameSuffix
         $baseInfo = @{
             "snappableType" = $_.SnappableType;
             "subSnappableType" = $_.SubSnappableType;
@@ -161,17 +174,17 @@ function Start-MassRecovery() {
                 }
               }";
         }
-    
+
         $response = Invoke-RestMethod -Method POST -Uri $endpoint -Body $($payload | ConvertTo-JSON -Depth 100) -Headers $headers
         if ($null -eq $response) {
-            return 
+            return
         }
         if ($response.errors) {
             $response = $response.errors[0].message
             Write-Host "Error starting mass recovery $recoveryName. The error response is $($response).`n"
             return
         }
-       
+
         $row = '' | Select-Object massRecoveryInstanceID,taskchainID, jobID, error
         $row.massRecoveryInstanceId = $response.data.startBulkRecovery.bulkRecoveryInstanceId
         $row.taskchainID = $response.data.startBulkRecovery.taskchainId
