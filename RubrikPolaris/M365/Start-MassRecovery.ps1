@@ -60,7 +60,7 @@ function Start-MassRecovery() {
         [ValidateSet("OneDrive", "Exchange", "Sharepoint")]
         [String]$WorkloadType,
         [Parameter(Mandatory=$False)]
-        [ValidateSet("Mailbox", "Calendar", "Contact")]
+        [ValidateSet("Mailbox", "Calendar", "Contacts")]
         [String]$SubSnappableName,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
