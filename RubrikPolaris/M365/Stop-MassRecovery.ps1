@@ -9,6 +9,9 @@ function Stop-MassRecovery() {
     .PARAMETER MassRecoveryInstanceId
     The instance ID of mass recovery you wish to stop.
 
+    .PARAMETER SubscriptionName
+    The subscription name for the mass recovery you wish to stop.
+
     .INPUTS
     None. You cannot pipe objects to Get-MassRecoveryProgress.
    
@@ -16,12 +19,14 @@ function Stop-MassRecovery() {
     System.Object. Stop-MassRecovery returns true in case it is success 
    
     .EXAMPLE
-    PS> Stop-MassRecovery -MassRecoveryInstanceId $massRecoveryInstanceId
+    PS> Stop-MassRecovery -MassRecoveryInstanceId $massRecoveryInstanceId -SubscriptionName $subscriptionName
     #>
 
     param(
         [Parameter(Mandatory=$True)]
         [String]$MassRecoveryInstanceId,
+        [Parameter(Mandatory=$True)]
+        [String]$SubscriptionName,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
@@ -39,6 +44,8 @@ function Stop-MassRecovery() {
 
     $endpoint = $PolarisURL + '/api/graphql'
 
+    $subscriptionId = getSubscriptionId($SubscriptionName)
+
     Write-Information -Message "Stopping mass recovery with instance ID $MassRecoveryInstanceId."
 
     $payload = @{
@@ -46,6 +53,7 @@ function Stop-MassRecovery() {
         "variables"     = @{
             "input" = @{
               "bulkRecoveryInstanceId" = $MassRecoveryInstanceId;
+              "subscriptionId" = $subscriptionId;
             };
           };
         "query"         = "mutation CancelBulkRecovery(`$input: CancelBulkRecoveryInput!) {
@@ -83,7 +91,7 @@ function Test-IsGuid
         [Parameter(Mandatory = $true)]
         [string]$StringGuid
     )
- 
+
    $ObjectGuid = [System.Guid]::empty
    return [System.Guid]::TryParse($StringGuid,[System.Management.Automation.PSReference]$ObjectGuid) # Returns True if successfully parsed
 }
