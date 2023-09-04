@@ -183,7 +183,7 @@ function getSubscriptionId($subscriptionName) {
 
   $subscriptionIds = @()
   $o365Orgs | ForEach-Object -Process {
-    if ($_.name -eq $subscriptionName) {
+    if (($_.name -eq $subscriptionName) -and ($_.status -eq "ACTIVE")) {
       $subscriptionIds += $_.id
     }
   }
