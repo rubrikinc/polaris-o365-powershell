@@ -173,6 +173,7 @@ function getSubscriptionId($subscriptionName) {
           nodes {
             id
             name
+            status
           }
         }
       }";
