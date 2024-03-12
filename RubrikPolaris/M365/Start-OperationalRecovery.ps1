@@ -71,7 +71,7 @@ function Start-OperationalRecovery() {
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
     
-    $calendarFromTime = (Get-Date).AddDays(-14) | Get-Date -f "MM/DD/YY HH:MM:SS"
+    $calendarFromTime = (Get-Date).AddDays(-14) | Get-Date -format s
 
     $snappableToSubSnappableMap = @{
         "Exchange" = @(
