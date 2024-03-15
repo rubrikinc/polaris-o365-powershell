@@ -44,6 +44,8 @@ The following commands are available in the module:
 * `Start-MassRecovery`
 * `Stop-MassRecovery`
 * `Get-MassRecoveryProgress`
+* `Start-OperationalRecovery`
+* `Start-CompleteOperationalRecovery`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
 
