@@ -47,7 +47,8 @@ function Start-CompleteOperationalRecovery() {
 
     $subscriptionId = getSubscriptionId($SubscriptionName)
 
-    Write-Information -Message "Starting complete operational recovery with instance ID $MassRecoveryInstanceId."
+    Write-Host "Starting complete operational recovery with instance ID $MassRecoveryInstanceId."
+    Write-Host "`n"
 
     $payload = @{
         "operationName" = "CompleteOperationalRecovery";
@@ -88,7 +89,7 @@ function Start-CompleteOperationalRecovery() {
 
     $recoveryName = $response.data.completeOperationalRecovery.recoveryName
 
-    Write-Host "Started mass recovery $recoveryName with the following details:"
+    Write-Host "Started complete operational recovery $recoveryName with the following details:"
     Write-Host $row
     Write-Host "`n"
     return

@@ -8,8 +8,8 @@ function Start-OperationalRecovery() {
     given recovery point in time using the mailboxTimeRange.
 
     .PARAMETER Name
-    The name of the operational recovery you wish to choose. 
-
+    The name of the operational recovery you wish to choose.
+   
     .PARAMETER RecoveryPoint
     The date time you wish to use to restore closest earlier backups. The format
     is "YYYY-MM-DD HH:MM:SS"
@@ -90,7 +90,7 @@ function Start-OperationalRecovery() {
     }    
 
     $calendarFromTime = (Get-Date).AddDays(-14) | Get-Date -format s
-    Write-Host "Start Operational Recovery using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
+    Write-Host "Starting Operational Recovery $Name using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
 
     $snappableToSubSnappableMap = @{
         "Exchange" = @(
@@ -105,7 +105,8 @@ function Start-OperationalRecovery() {
                             "untilTime" = $MailboxUntilTime;
                         };
                         "archiveFolderAction" = $ArchiveFolderAction;
-		    }
+		    };
+                   "operationalRecoveryStage" = "INITIAL_OPERATIONAL_RECOVERY";
                 };
             };
             @{
@@ -118,6 +119,7 @@ function Start-OperationalRecovery() {
                             "fromTime" = $calendarFromTime 
                         }; 
                     };
+                   "operationalRecoveryStage" = "INITIAL_OPERATIONAL_RECOVERY";
                 };
             };
             @{
@@ -146,7 +148,7 @@ function Start-OperationalRecovery() {
         ($_.NameSuffix -eq $SubWorkloadType) -or ($SubWorkloadType -eq "")
     } | ForEach-Object -Process {
         $recoveryName=$Name+"_"+$_.NameSuffix
-        $baseInfo = @{
+	$baseInfo = @{
             "snappableType" = $_.SnappableType;
             "subSnappableType" = $_.SubSnappableType;
             "recoverySpec" = @{
