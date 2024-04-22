@@ -46,6 +46,7 @@ The following commands are available in the module:
 * `Get-MassRecoveryProgress`
 * `Start-OperationalRecovery`
 * `Start-CompleteOperationalRecovery`
+* `Update-EnterpriseApplicationSecret`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
 
