@@ -3,7 +3,7 @@ function Update-EnterpriseApplicationSecret() {
     <#
     .SYNOPSIS
 
-   Create a new Enterprise Application in Microsoft 365 and then adds to Rubrik.
+    Updates secret of exostomg Application in Microsoft 365 and then adds to Rubrik.
 
     .PARAMETER DataSource
     The type of Enterprise Application you wish to update. Valid values are: Exchange, SharePoint, OneDrive.
