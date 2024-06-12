@@ -20,9 +20,12 @@ function Start-OperationalRecovery() {
     .PARAMETER AdGroupId
     The ID of the AD Group you wish to operational restore.
 
+    .PARAMETER ConfiguredGroupName
+    The Name of the Configured Group you wish to operational restore.
+
     .PARAMETER WorkloadType
-    The type of workload you wish to mass restore, only "Exchange" is supported
-    right now.
+    The type of workload you wish to operational restore, "Exchange" and "Sharepoint"
+    are supported right now.
   
     .PARAMETER MailboxFromTime
     The date time you wish to use to retore the emails received after that. The
@@ -34,6 +37,17 @@ function Start-OperationalRecovery() {
 
     .PARAMETER ArchiveFolderAction
     The Action of archive folder you wish to use to restore mailbox.
+    
+    .PARAMETER SharepointFromTime
+    The date time you wish to use to retore the sites received after that. The
+    format is "YYYY-MM-DD HH:MM:SS"
+
+    .PARAMETER SharepointUntilTime
+    The date time you wish to use to retore the sites received before that. The
+    format is "YYYY-MM-DD HH:MM:SS"
+
+    .PARAMETER ShouldSkipItemPermission
+    The Action of skip item permission you wish to use to restore site.
 
     .PARAMETER SubWorkloadType
     The type of sub workload you wish to restore. Only supported for "Exchange"
@@ -60,10 +74,12 @@ function Start-OperationalRecovery() {
         [DateTime]$RecoveryPoint,
         [Parameter(Mandatory=$True)]
         [String]$SubscriptionName,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory=$False)]
         [String]$AdGroupId,
+        [Parameter(Mandatory=$False)]
+        [String]$ConfiguredGroupName,
         [Parameter(Mandatory=$True)]
-        [ValidateSet("Exchange")]
+        [ValidateSet("Exchange", "Sharepoint")]
         [String]$WorkloadType,
         [Parameter(Mandatory=$False)]
         [DateTime]$MailboxFromTime,
@@ -73,13 +89,23 @@ function Start-OperationalRecovery() {
         [ValidateSet("NO_ACTION", "EXCLUDE_ARCHIVE", "ARCHIVE_ONLY")]
         [String]$ArchiveFolderAction,
         [Parameter(Mandatory=$False)]
+        [DateTime]$SharepointFromTime,
+        [Parameter(Mandatory=$False)]
+        [DateTime]$SharepointUntilTime,
+        [Parameter(Mandatory=$False)]
+        [Boolean]$ShouldSkipItemPermission,
+        [Parameter(Mandatory=$False)]
         [ValidateSet("Mailbox", "Calendar", "Contacts")]
         [String]$SubWorkloadType,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
     
-    if (($SubWorkloadType -eq "Mailbox") -or ($SubWorkloadType -eq "")) {
+    if ($SubWorkloadType -eq "Mailbox") {
+        if ($AdGroupId -eq "") {
+            Write-Host "Error starting operational recovery $Name. AdGroupId should not be empty for Exchange workload type.`n"
+            return
+        }
         if ($ArchiveFolderAction -eq "") {
             $ArchiveFolderAction = "NO_ACTION"
         }
@@ -87,10 +113,26 @@ function Start-OperationalRecovery() {
 	    Write-Host "Error starting operational recovery $Name. One of MailboxFromTime, MailboxUntilTime and ArchiveFolderAction should not be empty for Exchange Mailbox type.`n"
             return
 	}
+    }
+
+    if ($SubWorkloadType -eq "Sharepoint") {
+        if ($ConfiguredGroupName -eq "") {
+            Write-Host "Error starting operational recovery $Name. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
+            return
+        }
+        if (($SharepointFromTime -eq $null) -and ($SharepointUntilTime -eq $null)) {
+            Write-Host "Error starting operational recovery $Name. One of SharepointFromTime, SharepointUntilTime should not be empty for Sharepoint.`n"
+            return
+        }
     }    
 
     $calendarFromTime = (Get-Date).AddDays(-14) | Get-Date -format s
-    Write-Host "Starting Operational Recovery $Name using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
+    
+    if ($SubWorkloadType -eq "Mailbox") {
+        Write-Host "Starting Operational Recovery $Name using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
+    } elseif ($SubWorkloadType -eq "Sharepoint") {
+        Write-Host "Starting Operational Recovery $Name using LastModifiedTimeFilter fromTime: $SharepointFromTime, untilTime: $SharepointUntilTime.`n"
+    }
 
     $snappableToSubSnappableMap = @{
         "Exchange" = @(
@@ -129,6 +171,23 @@ function Start-OperationalRecovery() {
                 OperationalRecoverySpec = $null;
             };
         );
+        "Sharepoint" = @(
+            @{
+                SnappableType = "O365_SHAREPOINT";
+                SubSnappableType = "NONE";
+                NameSuffix="Sharepoint";
+                OperationalRecoverySpec = @{
+                    "sharepointOperationalRecoverySpec" = @{
+                        "lastModifiedTimeFilter" = @{
+                            "fromTime" = $SharepointFromTime;
+                            "untilTime" = $SharepointUntilTime;
+                        };
+                        "shouldSkipItemPermission" = $ShouldSkipItemPermission;
+                    };
+                   "operationalRecoveryStage" = "INITIAL_OPERATIONAL_RECOVERY";
+                };
+            };
+        );
     }
 
     $headers = @{
@@ -159,9 +218,17 @@ function Start-OperationalRecovery() {
             }
         }
 
-        $o365GroupSelectorWithRecoverySpec = @{
-            "baseInfo" = $baseInfo;
-            "adGroupId" = $AdGroupId;
+        if ($WorkloadType -eq "Sharepoint") {
+            $o365GroupSelectorWithRecoverySpec = @{
+                "baseInfo" = $baseInfo;
+                "groupName" = $ConfiguredGroupName;
+            }
+        } else {
+            # right now it is implicit that other workload types would be Exchange
+            $o365GroupSelectorWithRecoverySpec = @{
+                "baseInfo" = $baseInfo;
+                "adGroupId" = $AdGroupId;
+            }
         }
 
         $payload = @{
