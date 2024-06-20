@@ -48,6 +48,9 @@ function Start-OperationalRecovery() {
 
     .PARAMETER ShouldSkipItemPermission
     The Action of skip item permission you wish to use to restore site.
+ 
+    .PARAMETER InplaceRecovery
+    The Action of recover objects to original location and overwrite duplicates.
 
     .PARAMETER SubWorkloadType
     The type of sub workload you wish to restore. Only supported for "Exchange"
@@ -94,6 +97,8 @@ function Start-OperationalRecovery() {
         [DateTime]$SharepointUntilTime,
         [Parameter(Mandatory=$False)]
         [Boolean]$ShouldSkipItemPermission,
+        [Parameter(Mandatory=$True)]
+        [Boolean]$InplaceRecovery,
         [Parameter(Mandatory=$False)]
         [ValidateSet("Mailbox", "Calendar", "Contacts")]
         [String]$SubWorkloadType,
@@ -203,6 +208,14 @@ function Start-OperationalRecovery() {
   
     $subscriptionId = getSubscriptionId($SubscriptionName)
   
+    $inplaceRecoverySpec = @{
+        "nameCollisionRule" = "OVERWRITE";
+    }
+
+    if ($InplaceRecovery -eq $False) {
+        $inplaceRecoverySpec = $null
+    } 
+
     $snappableToSubSnappableMap[$WorkloadType] | Where-Object {
         ($_.NameSuffix -eq $SubWorkloadType) -or ($SubWorkloadType -eq "")
     } | ForEach-Object -Process {
@@ -214,7 +227,8 @@ function Start-OperationalRecovery() {
                 "recoveryPoint" = $rpMilliseconds;
                 "srcSubscriptionId" = $subscriptionId;
                 "targetSubscriptionId" = $subscriptionId;
-                "operationalRecoverySpec" = $_.OperationalRecoverySpec
+                "operationalRecoverySpec" = $_.OperationalRecoverySpec;
+                "inplaceRecoverySpec" = $inplaceRecoverySpec;
             }
         }
 
