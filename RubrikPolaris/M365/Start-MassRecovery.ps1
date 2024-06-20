@@ -1,10 +1,10 @@
 function Start-MassRecovery() {
     <#
     .SYNOPSIS
-    Mass restore OneDrives for an AD Group 
+    Mass restore OneDrive, Exchange or Sharepoint for a group 
     
     .DESCRIPTION
-    Mass restore entire OneDrives for an AD Group from latest backups before a
+    Mass restore entire OneDrive, Exchange or Sharepoint for a group from latest backups before a
     given recovery point in time.
 
     .PARAMETER Name
@@ -24,9 +24,11 @@ function Start-MassRecovery() {
     The name of the Configured Group you wish to mass restore.
 
     .PARAMETER WorkloadType
-    The type of workload you wish to mass restore, only "OneDrive" is supported
-    right now.
-
+    The type of workload you wish to mass restore.
+    
+    .PARAMETER InplaceRecovery
+    The Action of recover objects to original location and overwrite duplicates.
+    
     .PARAMETER SubWorkloadType
     The type of sub workload you wish to restore. Only supported for "Exchange"
     workload type, where sub workload types are "Calendar", "Contacts" and "Mailbox"
@@ -39,11 +41,9 @@ function Start-MassRecovery() {
     the mass recovery job.
    
     .EXAMPLE
-    PS> Start-MassRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId
-        -WorkloadType $workloadType
+    PS> Start-MassRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType $workloadType -InplaceRecovery $True
 
-    PS> Start-MassRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName
-        -WorkloadType $workloadType
+    PS> Start-MassRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName -WorkloadType $workloadType -InplaceRecovery $False
     #>
 
     param(
@@ -139,7 +139,7 @@ function Start-MassRecovery() {
     $endpoint = $PolarisURL + '/api/graphql'
     $rpMilliseconds = ([DateTimeOffset]$RecoveryPoint).ToUnixTimeMilliseconds()
 
-    Write-Information -Message "Starting the mass restoration process for $WorkloadType account(s) under AD Group ID $AdGroupId."
+    Write-Information -Message "Starting the mass restoration process for $WorkloadType account(s)."
   
     $subscriptionId = getSubscriptionId($SubscriptionName)
   

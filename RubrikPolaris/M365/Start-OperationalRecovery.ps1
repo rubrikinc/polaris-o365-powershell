@@ -1,11 +1,11 @@
 function Start-OperationalRecovery() {
     <#
     .SYNOPSIS
-    Operational restore Exchange for an AD Group 
+    Operational restore Exchange, Sharepoint for a Group 
     
     .DESCRIPTION
-    Operational restore Exchange for an AD Group from latest backups before a
-    given recovery point in time using the mailboxTimeRange.
+    Operational restore Exchange, Sharepoint for a Group from latest backups before a
+    given recovery point using the time range filter and other specified recovery options.
 
     .PARAMETER Name
     The name of the operational recovery you wish to choose.
@@ -18,10 +18,10 @@ function Start-OperationalRecovery() {
     The subscription name you wish to operational restore under.
    
     .PARAMETER AdGroupId
-    The ID of the AD Group you wish to operational restore.
+    The ID of the AD Group you wish to operational restore Exchange.
 
     .PARAMETER ConfiguredGroupName
-    The Name of the Configured Group you wish to operational restore.
+    The Name of the Configured Group you wish to operational restore Sharepoint.
 
     .PARAMETER WorkloadType
     The type of workload you wish to operational restore, "Exchange" and "Sharepoint"
@@ -64,9 +64,11 @@ function Start-OperationalRecovery() {
     the mass recovery job.
    
     .EXAMPLE
-    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType $workloadType -MailboxFromTime $mailboxFromTime -MailboxUntilTime $mailboxUntilTime
+    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -MailboxFromTime $mailboxFromTime -MailboxUntilTime $mailboxUntilTime -InplaceRecovery $True
     
-    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType $workloadType -ArchiveFolderAction $archiveFolderAction 
+    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -ArchiveFolderAction $archiveFolderAction -InplaceRecovery $False
+
+    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName -WorkloadType Sharepoint -SharepointFromTime $sharepointFromTime -SharepointUntilTime $sharepointUntilTime -ShouldSkipItemPermission $True -InplaceRecovery $True
    
     #>
 
@@ -100,13 +102,13 @@ function Start-OperationalRecovery() {
         [Parameter(Mandatory=$True)]
         [Boolean]$InplaceRecovery,
         [Parameter(Mandatory=$False)]
-        [ValidateSet("Mailbox", "Calendar", "Contacts")]
+        [ValidateSet("Mailbox", "Calendar")]
         [String]$SubWorkloadType,
         [String]$Token = $global:RubrikPolarisConnection.accessToken,
         [String]$PolarisURL = $global:RubrikPolarisConnection.PolarisURL
     )
     
-    if ($SubWorkloadType -eq "Mailbox") {
+    if ($WorkloadType -eq "Exchange") {
         if ($AdGroupId -eq "") {
             Write-Host "Error starting operational recovery $Name. AdGroupId should not be empty for Exchange workload type.`n"
             return
@@ -114,13 +116,13 @@ function Start-OperationalRecovery() {
         if ($ArchiveFolderAction -eq "") {
             $ArchiveFolderAction = "NO_ACTION"
         }
-	if (($MailboxFromTime -eq $null) -and ($MailboxUntilTime -eq $null) -and ($ArchiveFolderAction -eq "NO_ACTION")) {
+	if (($SubWorkloadType -ne "Mailbox") -and ($MailboxFromTime -eq $null) -and ($MailboxUntilTime -eq $null) -and ($ArchiveFolderAction -eq "NO_ACTION")) {
 	    Write-Host "Error starting operational recovery $Name. One of MailboxFromTime, MailboxUntilTime and ArchiveFolderAction should not be empty for Exchange Mailbox type.`n"
             return
 	}
     }
 
-    if ($SubWorkloadType -eq "Sharepoint") {
+    if ($WorkloadType -eq "Sharepoint") {
         if ($ConfiguredGroupName -eq "") {
             Write-Host "Error starting operational recovery $Name. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
             return
@@ -129,13 +131,17 @@ function Start-OperationalRecovery() {
             Write-Host "Error starting operational recovery $Name. One of SharepointFromTime, SharepointUntilTime should not be empty for Sharepoint.`n"
             return
         }
+        if ($ShouldSkipItemPermission -eq "") {
+            Write-Host "Error starting operational recovery $Name. ShouldSkipItemPermission should not be empty for Sharepoint.`n"
+            return
+        }
     }    
 
     $calendarFromTime = (Get-Date).AddDays(-14) | Get-Date -format s
     
-    if ($SubWorkloadType -eq "Mailbox") {
+    if ($WorkloadType -eq "Mailbox") {
         Write-Host "Starting Operational Recovery $Name using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
-    } elseif ($SubWorkloadType -eq "Sharepoint") {
+    } elseif ($WorkloadType -eq "Sharepoint") {
         Write-Host "Starting Operational Recovery $Name using LastModifiedTimeFilter fromTime: $SharepointFromTime, untilTime: $SharepointUntilTime.`n"
     }
 
@@ -204,7 +210,7 @@ function Start-OperationalRecovery() {
     $endpoint = $PolarisURL + '/api/graphql'
     $rpMilliseconds = ([DateTimeOffset]$RecoveryPoint).ToUnixTimeMilliseconds()   
 
-    Write-Information -Message "Starting the operational restoration process for $WorkloadType account(s) under AD Group ID $AdGroupId."
+    Write-Information -Message "Starting the operational restoration process for $WorkloadType account(s)."
   
     $subscriptionId = getSubscriptionId($SubscriptionName)
   
