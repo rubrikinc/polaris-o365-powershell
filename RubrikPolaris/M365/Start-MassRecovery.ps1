@@ -60,6 +60,8 @@ function Start-MassRecovery() {
         [Parameter(Mandatory=$True)]
         [ValidateSet("OneDrive", "Exchange", "Sharepoint")]
         [String]$WorkloadType,
+        [Parameter(Mandatory=$True)]
+        [Boolean]$InplaceRecovery,
         [Parameter(Mandatory=$False)]
         [ValidateSet("Mailbox", "Calendar", "Contacts")]
         [String]$SubWorkloadType,
@@ -82,12 +84,20 @@ function Start-MassRecovery() {
         return
     }
 
+    $InplaceRecoverySpec = @{
+        "nameCollisionRule" = "OVERWRITE";
+    }
+    if ($InplaceRecovery -eq $False) { 
+        $InplaceRecoverySpec = $null
+    }
+
     $snappableToSubSnappableMap = @{
         "OneDrive" = @(
             @{
                 SnappableType = "O365_ONEDRIVE";
                 SubSnappableType = "NONE";
                 NameSuffix="OneDrive";
+                InplaceRecoverySpec = $null;
             }
         );
         "Exchange" = @(
@@ -95,16 +105,19 @@ function Start-MassRecovery() {
                 SnappableType = "O365_EXCHANGE";
                 SubSnappableType = "O365_MAILBOX";
                 NameSuffix="Mailbox";
+                InplaceRecoverySpec = $InplaceRecoverySpec;               
             };
             @{
                 SnappableType = "O365_EXCHANGE";
                 SubSnappableType = "O365_CALENDAR";
                 NameSuffix="Calendar";
+                InplaceRecoverySpec = $InplaceRecoverySpec;
             };
             @{
                 SnappableType = "O365_EXCHANGE";
                 SubSnappableType = "O365_CONTACT";
                 NameSuffix="Contacts";
+                InplaceRecoverySpec = $InplaceRecoverySpec;
             };
         );
         "Sharepoint" = @(
@@ -112,6 +125,7 @@ function Start-MassRecovery() {
                 SnappableType = "O365_SHAREPOINT";
                 SubSnappableType = "NONE";
                 NameSuffix="Sharepoint";
+                InplaceRecoverySpec = $InplaceRecoverySpec;
             }
         );
     }
@@ -140,6 +154,7 @@ function Start-MassRecovery() {
                 "recoveryPoint" = $rpMilliseconds;
                 "srcSubscriptionId" = $subscriptionId;
                 "targetSubscriptionId" = $subscriptionId;
+                "inplaceRecoverySpec" = $_.InplaceRecoverySpec;
             }
         }
 
