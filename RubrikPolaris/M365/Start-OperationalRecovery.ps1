@@ -48,6 +48,9 @@ function Start-OperationalRecovery() {
 
     .PARAMETER ShouldSkipItemPermission
     The Action of skip item permission you wish to use to restore site.
+
+    .PARAMETER SiteOwnerEmail
+    The site owner email you wish to use when original site owner does not exist any more.
  
     .PARAMETER InplaceRecovery
     The Action of recover objects to original location and overwrite duplicates.
@@ -99,6 +102,8 @@ function Start-OperationalRecovery() {
         [DateTime]$SharepointUntilTime,
         [Parameter(Mandatory=$False)]
         [Boolean]$ShouldSkipItemPermission,
+        [Parameter(Mandatory=$False)]
+        [String]$SiteOwnerEmail,
         [Parameter(Mandatory=$True)]
         [Boolean]$InplaceRecovery,
         [Parameter(Mandatory=$False)]
@@ -194,6 +199,7 @@ function Start-OperationalRecovery() {
                             "untilTime" = $SharepointUntilTime;
                         };
                         "shouldSkipItemPermission" = $ShouldSkipItemPermission;
+                        "siteOwnerEmail" = $SiteOwnerEmail;
                     };
                    "operationalRecoveryStage" = "INITIAL_OPERATIONAL_RECOVERY";
                 };
