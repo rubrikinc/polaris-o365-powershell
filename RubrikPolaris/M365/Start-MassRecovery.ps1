@@ -60,7 +60,7 @@ function Start-MassRecovery() {
         [Parameter(Mandatory=$True)]
         [ValidateSet("OneDrive", "Exchange", "Sharepoint")]
         [String]$WorkloadType,
-        [Parameter(Mandatory=$True)]
+        [Parameter(Mandatory=$False)]
         [Boolean]$InplaceRecovery,
         [Parameter(Mandatory=$False)]
         [ValidateSet("Mailbox", "Calendar", "Contacts")]
@@ -84,11 +84,12 @@ function Start-MassRecovery() {
         return
     }
 
-    $InplaceRecoverySpec = @{
-        "nameCollisionRule" = "OVERWRITE";
-    }
-    if ($InplaceRecovery -eq $False) { 
-        $InplaceRecoverySpec = $null
+    $InplaceRecoverySpec = $null
+
+    if ($InplaceRecovery -eq $True) {
+        $InplaceRecoverySpec = @{
+            "nameCollisionRule" = "OVERWRITE";
+        }
     }
 
     $snappableToSubSnappableMap = @{
@@ -97,7 +98,6 @@ function Start-MassRecovery() {
                 SnappableType = "O365_ONEDRIVE";
                 SubSnappableType = "NONE";
                 NameSuffix="OneDrive";
-                InplaceRecoverySpec = $null;
             }
         );
         "Exchange" = @(
@@ -125,7 +125,6 @@ function Start-MassRecovery() {
                 SnappableType = "O365_SHAREPOINT";
                 SubSnappableType = "NONE";
                 NameSuffix="Sharepoint";
-                InplaceRecoverySpec = $InplaceRecoverySpec;
             }
         );
     }
