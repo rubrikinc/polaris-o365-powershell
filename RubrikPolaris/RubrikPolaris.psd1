@@ -88,7 +88,7 @@ FunctionsToExport = @(
     'Start-MassRecovery',
     'Get-MassRecoveryProgress',
     'Stop-MassRecovery',
-    'Start-OperationalRecovery',
+    'Start-PrioritizedDataRecovery',
     'Start-CompleteOperationalRecovery',
     'Restore-PolarisM365Exchange',
     'Get-PolarisM365ExchangeSnapshot'
