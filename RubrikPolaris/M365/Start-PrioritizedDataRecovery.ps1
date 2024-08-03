@@ -1,30 +1,30 @@
-function Start-OperationalRecovery() {
+function Start-PrioritizedDataRecovery() {
     <#
     .SYNOPSIS
-    Operational restore Exchange, Sharepoint for a Group 
+    Prioritized restore Exchange, Sharepoint for a Group 
     
     .DESCRIPTION
-    Operational restore Exchange, Sharepoint for a Group from latest backups before a
+    Prioritized restore Exchange, Sharepoint for a Group from latest backups before a
     given recovery point using the time range filter and other specified recovery options.
 
     .PARAMETER Name
-    The name of the operational recovery you wish to choose.
+    The name of the prioritized data recovery you wish to choose.
    
     .PARAMETER RecoveryPoint
     The date time you wish to use to restore closest earlier backups. The format
     is "YYYY-MM-DD HH:MM:SS"
     
     .PARAMETER SubscriptionName
-    The subscription name you wish to operational restore under.
+    The subscription name you wish to prioritized restore under.
    
     .PARAMETER AdGroupId
-    The ID of the AD Group you wish to operational restore Exchange.
+    The ID of the AD Group you wish to prioritized restore Exchange.
 
     .PARAMETER ConfiguredGroupName
-    The Name of the Configured Group you wish to operational restore Sharepoint.
+    The Name of the Configured Group you wish to prioritized restore Sharepoint.
 
     .PARAMETER WorkloadType
-    The type of workload you wish to operational restore, "Exchange" and "Sharepoint"
+    The type of workload you wish to prioritized restore, "Exchange" and "Sharepoint"
     are supported right now.
   
     .PARAMETER MailboxFromTime
@@ -60,18 +60,18 @@ function Start-OperationalRecovery() {
     workload type, where sub workload types are "Calendar", "Contacts" and "Mailbox"
     
     .INPUTS
-    None. You cannot pipe objects to Start-OperationalRecovery.
+    None. You cannot pipe objects to Start-PrioritizedDataRecovery.
    
     .OUTPUTS
     System.Object. The taskchainID, massRecoveryInstanceID, error and jobID for 
     the mass recovery job.
    
     .EXAMPLE
-    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -MailboxFromTime $mailboxFromTime -MailboxUntilTime $mailboxUntilTime -InplaceRecovery $True
+    PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -MailboxFromTime $mailboxFromTime -MailboxUntilTime $mailboxUntilTime -InplaceRecovery $True
     
-    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -ArchiveFolderAction $archiveFolderAction -InplaceRecovery $False
+    PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -ArchiveFolderAction $archiveFolderAction -InplaceRecovery $False
 
-    PS> Start-OperationalRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName -WorkloadType Sharepoint -SharepointFromTime $sharepointFromTime -SharepointUntilTime $sharepointUntilTime -ShouldSkipItemPermission $True -InplaceRecovery $True
+    PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName -WorkloadType Sharepoint -SharepointFromTime $sharepointFromTime -SharepointUntilTime $sharepointUntilTime -ShouldSkipItemPermission $True -InplaceRecovery $True
    
     #>
 
@@ -115,29 +115,29 @@ function Start-OperationalRecovery() {
     
     if ($WorkloadType -eq "Exchange") {
         if ($AdGroupId -eq "") {
-            Write-Host "Error starting operational recovery $Name. AdGroupId should not be empty for Exchange workload type.`n"
+            Write-Host "Error starting prioritized data recovery $Name. AdGroupId should not be empty for Exchange workload type.`n"
             return
         }
         if ($ArchiveFolderAction -eq "") {
             $ArchiveFolderAction = "NO_ACTION"
         }
 	if (($SubWorkloadType -ne "Mailbox") -and ($MailboxFromTime -eq $null) -and ($MailboxUntilTime -eq $null) -and ($ArchiveFolderAction -eq "NO_ACTION")) {
-	    Write-Host "Error starting operational recovery $Name. One of MailboxFromTime, MailboxUntilTime and ArchiveFolderAction should not be empty for Exchange Mailbox type.`n"
+	    Write-Host "Error starting prioritized data recovery $Name. One of MailboxFromTime, MailboxUntilTime and ArchiveFolderAction should not be empty for Exchange Mailbox type.`n"
             return
 	}
     }
 
     if ($WorkloadType -eq "Sharepoint") {
         if ($ConfiguredGroupName -eq "") {
-            Write-Host "Error starting operational recovery $Name. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
+            Write-Host "Error starting prioritized data recovery $Name. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
             return
         }
         if (($SharepointFromTime -eq $null) -and ($SharepointUntilTime -eq $null)) {
-            Write-Host "Error starting operational recovery $Name. One of SharepointFromTime, SharepointUntilTime should not be empty for Sharepoint.`n"
+            Write-Host "Error starting prioritized data recovery $Name. One of SharepointFromTime, SharepointUntilTime should not be empty for Sharepoint.`n"
             return
         }
         if ($ShouldSkipItemPermission -eq "") {
-            Write-Host "Error starting operational recovery $Name. ShouldSkipItemPermission should not be empty for Sharepoint.`n"
+            Write-Host "Error starting prioritized data recovery $Name. ShouldSkipItemPermission should not be empty for Sharepoint.`n"
             return
         }
     }    
@@ -145,9 +145,9 @@ function Start-OperationalRecovery() {
     $calendarFromTime = (Get-Date).AddDays(-14) | Get-Date -format s
     
     if ($WorkloadType -eq "Mailbox") {
-        Write-Host "Starting Operational Recovery $Name using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
+        Write-Host "Starting Prioritized Data Recovery $Name using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
     } elseif ($WorkloadType -eq "Sharepoint") {
-        Write-Host "Starting Operational Recovery $Name using LastModifiedTimeFilter fromTime: $SharepointFromTime, untilTime: $SharepointUntilTime.`n"
+        Write-Host "Starting Prioritized Data Recovery $Name using LastModifiedTimeFilter fromTime: $SharepointFromTime, untilTime: $SharepointUntilTime.`n"
     }
 
     $snappableToSubSnappableMap = @{
@@ -216,7 +216,7 @@ function Start-OperationalRecovery() {
     $endpoint = $PolarisURL + '/api/graphql'
     $rpMilliseconds = ([DateTimeOffset]$RecoveryPoint).ToUnixTimeMilliseconds()   
 
-    Write-Information -Message "Starting the operational restoration process for $WorkloadType account(s)."
+    Write-Information -Message "Starting the prioritized restoration process for $WorkloadType account(s)."
   
     $subscriptionId = getSubscriptionId($SubscriptionName)
   
@@ -286,7 +286,7 @@ function Start-OperationalRecovery() {
         }
         if ($response.errors) {
             $response = $response.errors[0].message
-            Write-Host "Error starting operational recovery $recoveryName. The error response is $($response).`n"
+            Write-Host "Error starting prioritized data recovery $recoveryName. The error response is $($response).`n"
             return
         }
 
@@ -296,11 +296,11 @@ function Start-OperationalRecovery() {
         $row.jobID = $response.data.startBulkRecovery.jobId
         $row.error = $response.data.startBulkRecovery.error
 
-        Write-Host "Started operational recovery $recoveryName with the following details:"
+        Write-Host "Started prioritized data recovery $recoveryName with the following details:"
         Write-Host $row
         Write-Host "`n"
     }
 
     return
 }
-Export-ModuleMember -Function Start-OperationalRecovery
+Export-ModuleMember -Function Start-PrioritizedDataRecovery

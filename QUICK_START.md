@@ -44,7 +44,7 @@ The following commands are available in the module:
 * `Start-MassRecovery`
 * `Stop-MassRecovery`
 * `Get-MassRecoveryProgress`
-* `Start-OperationalRecovery`
+* `Start-PrioritizedDataRecovery`
 * `Start-CompleteOperationalRecovery`
 * `Update-EnterpriseApplicationSecret`
 
