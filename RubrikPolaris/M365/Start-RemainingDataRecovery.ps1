@@ -1,26 +1,26 @@
-function Start-CompleteOperationalRecovery() {
+function Start-RemainingDataRecovery() {
     <#
     .SYNOPSIS
-    Starts complete operational recovery 
+    Starts remaining data recovery 
     
     .DESCRIPTION
-    Starts the complete operational recovery with a given initial operation recovery instance ID and M365 subscription Name.
+    Starts the remaining data recovery with a given initial operation recovery instance ID and M365 subscription Name.
 
     .PARAMETER MassRecoveryInstanceId
-    The instance ID of initial operational recovery you wish to complete .
+    The instance ID of the prioritized data recovery you wish to complete .
 
     .PARAMETER SubscriptionName
-    The subscription name for the initial operational recovery you wish to complete.
+    The subscription name for the prioritized data recovery you wish to complete.
 
     .INPUTS
-    None. You cannot pipe objects to Start-CompleteOperationalRecovery().
+    None. You cannot pipe objects to Start-RemainingDataRecovery().
    
     .OUTPUTS
     System.Object. The taskchainID, massRecoveryInstanceID, error, jobID and recoveryName for 
-    the complete operational recovery job.  
+    the remaining data recovery job.  
  
     .EXAMPLE
-    PS> Start-CompleteOperationalRecovery -MassRecoveryInstanceId $massRecoveryInstanceId -SubscriptionName $subscriptionName
+    PS> Start-RemainingDataRecovery -MassRecoveryInstanceId $massRecoveryInstanceId -SubscriptionName $subscriptionName
     #>
 
     param(
@@ -33,7 +33,7 @@ function Start-CompleteOperationalRecovery() {
     )
 
     if((Test-IsGuid $MassRecoveryInstanceId) -eq $False) {
-      Write-Host "Error starting complete operational recovery with instance ID $MassRecoveryInstanceId. The error response is 'instance ID is not a valid UUID'."
+      Write-Host "Error starting remaining data recovery with instance ID $MassRecoveryInstanceId. The error response is 'instance ID is not a valid UUID'."
       return
     }
 
@@ -47,7 +47,7 @@ function Start-CompleteOperationalRecovery() {
 
     $subscriptionId = getSubscriptionId($SubscriptionName)
 
-    Write-Host "Starting complete operational recovery with instance ID $MassRecoveryInstanceId."
+    Write-Host "Starting remaining data recovery with instance ID $MassRecoveryInstanceId."
     Write-Host "`n"
 
     $payload = @{
@@ -77,7 +77,7 @@ function Start-CompleteOperationalRecovery() {
 
     if ($response.errors) {
       $response = $response.errors[0].message
-      Write-Host "Error starting complete operational recovery with instance ID $MassRecoveryInstanceId. The error response is $($response)."
+      Write-Host "Error starting remaining data recovery with instance ID $MassRecoveryInstanceId. The error response is $($response)."
       return
     }
 
@@ -89,12 +89,12 @@ function Start-CompleteOperationalRecovery() {
 
     $recoveryName = $response.data.completeOperationalRecovery.recoveryName
 
-    Write-Host "Started complete operational recovery $recoveryName with the following details:"
+    Write-Host "Started remaining data recovery $recoveryName with the following details:"
     Write-Host $row
     Write-Host "`n"
     return
 }
-Export-ModuleMember -Function Start-CompleteOperationalRecovery
+Export-ModuleMember -Function Start-RemainingDataRecovery
 
 function Test-IsGuid
 {
