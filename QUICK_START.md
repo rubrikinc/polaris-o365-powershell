@@ -45,7 +45,7 @@ The following commands are available in the module:
 * `Stop-MassRecovery`
 * `Get-MassRecoveryProgress`
 * `Start-PrioritizedDataRecovery`
-* `Start-CompleteOperationalRecovery`
+* `Start-RemainingDataRecovery`
 * `Update-EnterpriseApplicationSecret`
 
 Each command has help which describes their usage and parameters, these can be seen using the `Get-Help <command>` command within PowerShell.
