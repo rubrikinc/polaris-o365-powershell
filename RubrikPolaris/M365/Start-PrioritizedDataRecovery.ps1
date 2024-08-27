@@ -27,24 +27,16 @@ function Start-PrioritizedDataRecovery() {
     The type of workload you wish to prioritized restore, "Exchange" and "Sharepoint"
     are supported right now.
   
-    .PARAMETER MailboxFromTime
-    The date time you wish to use to retore the emails received after that. The
-    format is "YYYY-MM-DD HH:MM:SS"
+    .PARAMETER FromTime
+    The date time you wish to use to retore the emails,sharepoint and onedrive received after that.
+    The format is "YYYY-MM-DD HH:MM:SS"
 
-    .PARAMETER MailboxUntilTime
-    The date time you wish to use to retore the emails received before that. The
-    format is "YYYY-MM-DD HH:MM:SS"
+    .PARAMETER UntilTime
+    The date time you wish to use to retore the emails, sharepoint and onedrive received before that.
+    The format is "YYYY-MM-DD HH:MM:SS"
 
     .PARAMETER ArchiveFolderAction
     The Action of archive folder you wish to use to restore mailbox.
-    
-    .PARAMETER SharepointFromTime
-    The date time you wish to use to retore the sites received after that. The
-    format is "YYYY-MM-DD HH:MM:SS"
-
-    .PARAMETER SharepointUntilTime
-    The date time you wish to use to retore the sites received before that. The
-    format is "YYYY-MM-DD HH:MM:SS"
 
     .PARAMETER ShouldSkipItemPermission
     The Action of skip item permission you wish to use to restore site.
@@ -67,11 +59,11 @@ function Start-PrioritizedDataRecovery() {
     the mass recovery job.
    
     .EXAMPLE
-    PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -MailboxFromTime $mailboxFromTime -MailboxUntilTime $mailboxUntilTime -InplaceRecovery $True
+    PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -FromTime $fromTime -UntilTime $untilTime -InplaceRecovery $True
     
     PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -AdGroupId $adGroupId -WorkloadType Exchange -ArchiveFolderAction $archiveFolderAction -InplaceRecovery $False
 
-    PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName -WorkloadType Sharepoint -SharepointFromTime $sharepointFromTime -SharepointUntilTime $sharepointUntilTime -ShouldSkipItemPermission $True -InplaceRecovery $True
+    PS> Start-PrioritizedDataRecovery -Name $name -RecoveryPoint $recoveryPoint -SubscriptionName $subscriptionName -ConfiguredGroupName $configuredGroupName -WorkloadType Sharepoint -FromTime $fromTime -UntilTime $untilTime -ShouldSkipItemPermission $True -InplaceRecovery $True
    
     #>
 
@@ -87,19 +79,15 @@ function Start-PrioritizedDataRecovery() {
         [Parameter(Mandatory=$False)]
         [String]$ConfiguredGroupName,
         [Parameter(Mandatory=$True)]
-        [ValidateSet("Exchange", "Sharepoint")]
+        [ValidateSet("Exchange", "Sharepoint", "Onedrive")]
         [String]$WorkloadType,
         [Parameter(Mandatory=$False)]
-        [DateTime]$MailboxFromTime,
+        [DateTime]$FromTime,
         [Parameter(Mandatory=$False)]
-        [DateTime]$MailboxUntilTime,
+        [DateTime]$UntilTime,
         [Parameter(Mandatory=$False)]
         [ValidateSet("NO_ACTION", "EXCLUDE_ARCHIVE", "ARCHIVE_ONLY")]
         [String]$ArchiveFolderAction,
-        [Parameter(Mandatory=$False)]
-        [DateTime]$SharepointFromTime,
-        [Parameter(Mandatory=$False)]
-        [DateTime]$SharepointUntilTime,
         [Parameter(Mandatory=$False)]
         [Boolean]$ShouldSkipItemPermission,
         [Parameter(Mandatory=$False)]
@@ -121,8 +109,8 @@ function Start-PrioritizedDataRecovery() {
         if ($ArchiveFolderAction -eq "") {
             $ArchiveFolderAction = "NO_ACTION"
         }
-	if (($SubWorkloadType -ne "Mailbox") -and ($MailboxFromTime -eq $null) -and ($MailboxUntilTime -eq $null) -and ($ArchiveFolderAction -eq "NO_ACTION")) {
-	    Write-Host "Error starting prioritized data recovery $Name. One of MailboxFromTime, MailboxUntilTime and ArchiveFolderAction should not be empty for Exchange Mailbox type.`n"
+	if (($SubWorkloadType -ne "Mailbox") -and ($FromTime -eq $null) -and ($UntilTime -eq $null) -and ($ArchiveFolderAction -eq "NO_ACTION")) {
+	    Write-Host "Error starting prioritized data recovery $Name. One of FromTime, UntilTime and ArchiveFolderAction should not be empty for Exchange Mailbox type.`n"
             return
 	}
     }
@@ -132,8 +120,8 @@ function Start-PrioritizedDataRecovery() {
             Write-Host "Error starting prioritized data recovery $Name. ConfiguredGroupName should not be empty for Sharepoint workload type.`n"
             return
         }
-        if (($SharepointFromTime -eq $null) -and ($SharepointUntilTime -eq $null)) {
-            Write-Host "Error starting prioritized data recovery $Name. One of SharepointFromTime, SharepointUntilTime should not be empty for Sharepoint.`n"
+        if (($FromTime -eq $null) -and ($UntilTime -eq $null)) {
+            Write-Host "Error starting prioritized data recovery $Name. One of FromTime, UntilTime should not be empty for Sharepoint.`n"
             return
         }
         if ($ShouldSkipItemPermission -eq "") {
@@ -142,12 +130,23 @@ function Start-PrioritizedDataRecovery() {
         }
     }    
 
+       if ($WorkloadType -eq "Onedrive") {
+        if ($AdGroupId -eq "") {
+            Write-Host "Error starting prioritized data recovery $Name. AdGroupId should not be empty for Onedrive workload type.`n"
+            return
+        }
+        if (($FromTime -eq $null) -and ($UntilTime -eq $null)) {
+            Write-Host "Error starting prioritized data recovery $Name. One of FromTime, UntilTime should not be empty for Onedrive.`n"
+            return
+        }
+    }
+
     $calendarFromTime = (Get-Date).AddDays(-14) | Get-Date -format s
     
-    if ($WorkloadType -eq "Mailbox") {
-        Write-Host "Starting Prioritized Data Recovery $Name using MailboxTimeRange fromTime: $MailboxFromTime, untilTime: $MailboxUntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
-    } elseif ($WorkloadType -eq "Sharepoint") {
-        Write-Host "Starting Prioritized Data Recovery $Name using LastModifiedTimeFilter fromTime: $SharepointFromTime, untilTime: $SharepointUntilTime.`n"
+    if ($WorkloadType -eq "Exchange") {
+        Write-Host "Starting Prioritized Data Recovery $Name using MailboxTimeRange fromTime: $FromTime, untilTime: $UntilTime and CalendarTime Range fromTime: $calendarFromTime.`n"
+    } elseif (($WorkloadType -eq "Sharepoint") -or ($WorkloadType -eq "Onedrive")) {
+        Write-Host "Starting Prioritized Data Recovery $Name using LastModifiedTimeFilter fromTime: $FromTime, untilTime: $UntilTime.`n"
     }
 
     $snappableToSubSnappableMap = @{
@@ -159,8 +158,8 @@ function Start-PrioritizedDataRecovery() {
                 OperationalRecoverySpec = @{
                     "mailboxOperationalRecoverySpec" = @{
                         "mailboxTimeRange" = @{
-                            "fromTime" = $MailboxFromTime;
-                            "untilTime" = $MailboxUntilTime;
+                            "fromTime" = $FromTime;
+                            "untilTime" = $UntilTime;
                         };
                         "archiveFolderAction" = $ArchiveFolderAction;
 		    };
@@ -195,8 +194,8 @@ function Start-PrioritizedDataRecovery() {
                 OperationalRecoverySpec = @{
                     "sharepointOperationalRecoverySpec" = @{
                         "lastModifiedTimeFilter" = @{
-                            "fromTime" = $SharepointFromTime;
-                            "untilTime" = $SharepointUntilTime;
+                            "fromTime" = $FromTime;
+                            "untilTime" = $UntilTime;
                         };
                         "shouldSkipItemPermission" = $ShouldSkipItemPermission;
                         "siteOwnerEmail" = $SiteOwnerEmail;
@@ -205,6 +204,22 @@ function Start-PrioritizedDataRecovery() {
                 };
             };
         );
+       "Onedrive" = @(
+           @{
+               SnappableType = "O365_ONEDRIVE";
+                SubSnappableType = "NONE";
+                NameSuffix="Onedrive";
+                OperationalRecoverySpec = @{
+                    "onedriveOperationalRecoverySpec" = @{
+                        "lastModifiedTimeFilter" = @{
+                            "fromTime" = $FromTime;
+                            "untilTime" = $UntilTime;
+                        };
+                    };
+                   "operationalRecoveryStage" = "INITIAL_OPERATIONAL_RECOVERY";
+                }; 
+           };
+       );
     }
 
     $headers = @{
