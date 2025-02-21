@@ -42,7 +42,7 @@ function New-EnterpriseApplication() {
 
     param(
         [Parameter(Mandatory = $True)]
-        [ValidateSet("Exchange", "SharePoint", "OneDrive", "FirstFull")]
+        [ValidateSet("Exchange", "SharePoint", "OneDrive")]
         [String]$DataSource,
         [Parameter(Mandatory = $False)]
         [Int]$Count,
@@ -63,7 +63,7 @@ function New-EnterpriseApplication() {
     Write-Information -Message "Info: Checking for required 'Microsoft.Graph' module."
     if (Get-Module -ListAvailable -Name Microsoft.Graph)
     {
-        
+
     }
     else
     {
@@ -85,7 +85,7 @@ function New-EnterpriseApplication() {
     if ($numberOfSubscriptionsCOnfigured -eq 0){
         throw "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
     } elseif ($numberOfSubscriptionsCOnfigured -eq 1){
-        $subscriptionId = $configuredSubscriptionsOnRubrik.subscriptionId  
+        $subscriptionId = $configuredSubscriptionsOnRubrik.subscriptionId
     } else {
 
         if ($PSBoundParameters.ContainsKey("SubscriptionName") -eq $false){
@@ -97,15 +97,15 @@ function New-EnterpriseApplication() {
                 $subscriptionId = $sub.subscriptionId
                 Write-Output $subscriptionId
                 break
-                
-            }     
+
+            }
         }
 
         if ($subscriptionId -eq $null){
             throw "The '$($SubscriptionName)' Subscription has not been set up on Rubrik."
         }
 
-        
+
     }
 
     $o365AppType = @{
@@ -138,7 +138,7 @@ function New-EnterpriseApplication() {
     $grapApiAppId = "00000003-0000-0000-c000-000000000000"
     $ewsApiAppId = "00000002-0000-0ff1-ce00-000000000000"
     $sharePointApiAppId = "00000003-0000-0ff1-ce00-000000000000"
-  
+
     # Microsoft Teams can only be added through the  Rubrik UI due
     # to API limitations from Microsoft. Keeping this in place for future
     # proofing
@@ -152,22 +152,22 @@ function New-EnterpriseApplication() {
     # Sites.Read.All, Sites.ReadWrite.All, User.Read.All
     $oneDriveGraphPermissionsGuid = '332a536c-c7ef-4017-ab91-336970924f0d', '9492366f-7969-46a4-8d15-ed1a20078fff', 'df021288-bdef-4463-88db-98f22de89214'
     # Same permissions as OneDrive + Sites.FullControl.All
-    $sharePointGraphPermissionGuid = $oneDriveGraphPermissionsGuid + 'a82116e5-55eb-4c41-a434-62fe8a61c773'                                                                                                                                      
+    $sharePointGraphPermissionGuid = $oneDriveGraphPermissionsGuid + 'a82116e5-55eb-4c41-a434-62fe8a61c773'
     # Sites.FullControl.All
     $sharePointSpointPermissionGuid = '678536fe-1083-478a-9c59-b99265e6b0d3'
-    
+
     $enterpriceApplicationDetails = New-Object System.Collections.ArrayList
     $servicePrincipalAppRoleAssignedRetry = New-Object System.Collections.ArrayList
 
     if ($DataSource -eq "FirstFull"){
-    
+
         $toCreateDetails = @{
             "Exchange" = 154
             "OneDrive" = 16
             "SharePoint" = 24
         }
 
-     
+
 
         Write-Information -Message "Info: Will create $($toCreateDetails.Exchange) Exchange, $($toCreateDetails.OneDrive) OneDrive, and $($toCreateDetails.SharePoint) SharePoint Enterprise Applications."
 
@@ -187,28 +187,28 @@ function New-EnterpriseApplication() {
         $sslConfig = "[req]
         req_extensions = v3_req
         distinguished_name = req_distinguished_name
-        
+
         [req_distinguished_name]
-        
+
         [v3_req]
         keyUsage=critical,digitalSignature,keyCertSign
         extendedKeyUsage=clientAuth,serverAuth"
 
         $privateKeySize = 2048
         $privateKeyFileName = "RubrikTempPrivateKey.pem"
-        $certFileName = "RubrikTempCert.crt"
+        $certFileName = "RubrikTempCert.pem"
         $CertSubject = "/O=Rubrik"
         $CertExpireDays = $ExpirationInYears * 365
 
         $convertedCertFileName = "RubrikTempConvertedFileCert.crt"
         $openSSLVersion = openssl version
-        $supportWindowsVersion = "OpenSSL 1.1.1"
+        $supportWindowsVersion = "OpenSSL 3.4.1"
 
         if ($IsWindows){
             if ($openSSLVersion -notmatch $supportWindowsVersion){
-                throw "The SharePoint Enterprise Application creation process requires OpenSSL v1.1.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
+                throw "The SharePoint Enterprise Application creation process requires OpenSSL v3.4.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
             }
-        } 
+        }
 
         if ($PSVersionTable.PSVersion.Major -lt 6){
             throw "The SharePoint Enterprise Application creation process requires PowerShell 6.0 or higher. Please upgrade and try again."
@@ -216,8 +216,8 @@ function New-EnterpriseApplication() {
 
 
         New-Item -Path . -Name  $sslConfigFileName -ItemType "file" -Value  $sslConfig | Out-Null
-        
-    } 
+
+    }
 
     Write-Information -Message "Info: Connecting to the Microsoft Graph API using the 'Application.ReadWrite.All' and 'AppRoleAssignment.ReadWrite.All' Scope."
     Connect-Graph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All","User.Read" -ErrorAction Stop | Out-Null
@@ -226,41 +226,41 @@ function New-EnterpriseApplication() {
     foreach ($source in $toCreateDetails.GetEnumerator()) {
         $DataSource = $source.Name
         $Count = $source.Value
-        
-        1..$Count | ForEach-Object { 
+
+        1..$Count | ForEach-Object {
 
             Write-Information -Message "Info: Creating a $($DataSource) Enterprise Application."
 
             try {
-               
+
                 $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue" -ErrorAction Stop
 
             }
             catch {
 
                 $errorMessage = $_.Exception | Out-String
-                
+
 
                 if($errorMessage.Contains('Insufficient privileges to complete the operation')) {
                     throw "Microsoft returned a 'Insufficient privileges to complete the operation' error message."
-                } 
+                }
 
                 while ($true) {
                     $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue"
                     if ($newEnterpriseApp){
                         break
                     } else {
-                        Start-Sleep 5                        
+                        Start-Sleep 5
                     }
                 }
 
                 $newEnterpriseApp = New-MgApplication -DisplayName $applicationName[$DataSource] -SignInAudience "AzureADMyOrg" -InformationAction "SilentlyContinue"
 
-                
+
             }
 
             Write-Information -Message "Info: Adding a Password to the Enterprise Application."
-            
+
 
             try {
                 $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $newEnterpriseApp.Id -PasswordCredential $passwordCred  -InformationAction "SilentlyContinue"
@@ -273,7 +273,7 @@ function New-EnterpriseApplication() {
                     if ($appStatusCheck){
                         break
                     } else {
-                        Start-Sleep 5                        
+                        Start-Sleep 5
                     }
                 }
 
@@ -282,13 +282,13 @@ function New-EnterpriseApplication() {
             }
 
             Write-Information -Message "Info: Adding a Service Principal to the Enterprise Application."
-            
+
             $newServicePrincipal = New-MgServicePrincipal -AppId $newEnterpriseApp.AppId -InformationAction "SilentlyContinue"
 
             Write-Information -Message "Info: Getting the Service Principal ID from Microsoft."
             $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'" -InformationAction "SilentlyContinue"
             if ($DataSource -eq "Exchange") {
-            
+
                 $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'" -InformationAction "SilentlyContinue"
 
                 foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
@@ -298,7 +298,7 @@ function New-EnterpriseApplication() {
                         -ResourceId $graphApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
                         -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
-                        
+
                     }
                     catch {
                         $tempSpDetails = New-Object System.Object
@@ -308,10 +308,10 @@ function New-EnterpriseApplication() {
                         $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
                         $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
                     }
-                    
+
                 }
 
-                
+
 
                 foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
                     try {
@@ -321,7 +321,7 @@ function New-EnterpriseApplication() {
                         -ResourceId $ewsApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
                         -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
-                        
+
                     }
                     catch {
                         $tempSpDetails = New-Object System.Object
@@ -330,16 +330,16 @@ function New-EnterpriseApplication() {
                         $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
                         $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
                         $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-                        
+
                     }
-                    
+
                 }
 
 
             }
             elseif ($DataSource -eq "OneDrive") {
                 Write-Information -Message "Info: Adding the required API Permissions to the Enterprise Application."
-                
+
                 try {
                     foreach ( $iD in $oneDriveGraphPermissionsGuid  ) {
                         New-MgServicePrincipalAppRoleAssignedTo `
@@ -347,9 +347,9 @@ function New-EnterpriseApplication() {
                         -ResourceId $graphApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
                         -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
-        
+
                     }
-                    
+
                 }
                 catch {
                     $tempSpDetails = New-Object System.Object
@@ -358,7 +358,7 @@ function New-EnterpriseApplication() {
                     $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
                     $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
                     $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-                    
+
                 }
 
             }
@@ -373,9 +373,9 @@ function New-EnterpriseApplication() {
                         -ResourceId $graphApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
                         -AppRoleId $iD -InformationAction "SilentlyContinue" | Out-Null
-                
+
                     }
-                    
+
                 }
                 catch {
                     $tempSpDetails = New-Object System.Object
@@ -384,7 +384,7 @@ function New-EnterpriseApplication() {
                     $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
                     $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
                     $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-                    
+
                 }
 
                 try {
@@ -394,9 +394,9 @@ function New-EnterpriseApplication() {
                         -ResourceId $sharePointApiServicePrincipal.Id `
                         -PrincipalId $newServicePrincipal.Id `
                         -AppRoleId $iD -InformationAction "SilentlyContinue" | Out-Null
-                
+
                     }
-                    
+
                 }
                 catch {
                     $tempSpDetails = New-Object System.Object
@@ -405,27 +405,23 @@ function New-EnterpriseApplication() {
                     $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
                     $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
                     $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-                    
-                } 
+
+                }
 
 
                 Write-Information -Message "Info: Creating an RSA private key for the SharePoint Enterprise Application."
                 if ($IsWindows){
                     # On Windows openssl genrsa does not support additional options and SHA256 is already the default.
-                    openssl genrsa -out $privateKeyFileName $privateKeySize 2>$null
+                    openssl genrsa -traditional -out $privateKeyFileName $privateKeySize 2>$null
                 } else {
-                    openssl genrsa -out $privateKeyFileName $privateKeySize -sha256 -nodes 2>$null
+                    openssl genrsa -traditional -out $privateKeyFileName $privateKeySize -sha256 -nodes 2>$null
                 }
 
                 Write-Information -Message "Info: Creating a x509 self-signed certificate using the private key."
                 openssl req -key $privateKeyFileName -new -x509 -days $CertExpireDays -out $certFileName -sha256 -subj $CertSubject -config $sslConfigFileName -extensions v3_req
 
-                Write-Information -Message "Info: Converting the certificate to the binary DER format."
-                openssl x509 -in $certFileName -outform der -out $convertedCertFileName -sha256
-
-
                 # Cert Raw Data Sent to M365
-                $certRawData = Get-Content "${convertedCertFileName}" -AsByteStream
+                $certRawData = Get-Content "${certFileName}" -AsByteStream
                 # Cert Raw Data in Base 64 sent to Rubrik
                 $certRawDataBase64 = [System.Convert]::ToBase64String($certRawData)
 
@@ -433,19 +429,19 @@ function New-EnterpriseApplication() {
                 # Private Key in Base 64 sent to Rubrik
                 $pemRawDataBase64 = [System.Convert]::ToBase64String($pemRawData )
 
-            
+
 
                 $keyCredential = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphKeyCredential
                 $keyCredential.Type = "AsymmetricX509Cert";
                 $keyCredential.Usage = "Verify";
                 $keyCredential.Key = $certRawData;
-            
+
                 # Update-MgServicePrincipal -ServicePrincipalId $SPId -KeyCredentials $PrivateKeyCreds -PasswordCredentials $PasswordCreds
                 Write-Information -Message "Info: Adding the certs to the Enterprise Application"
                 try {
                     # Update-MgApplication  -ApplicationId $newEnterpriseApp.Id -KeyCredentials $KeyCreds
                     Update-MgApplication  -ApplicationId $newEnterpriseApp.Id -KeyCredentials $($keyCredential)
-                    
+
                     # Update-MgServicePrincipal -ServicePrincipalId $newEnterpriseApp.Id -BodyParameter $params
                     Write-Information -Message "Info: Successfully added the certs to the Enterprise Application"
 
@@ -458,7 +454,6 @@ function New-EnterpriseApplication() {
 
 
                 Remove-Item  "$certFileName"
-                Remove-Item "${convertedCertFileName}"
                 Remove-Item "${privateKeyFileName}"
 
                 

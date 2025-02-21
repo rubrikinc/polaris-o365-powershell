@@ -4,7 +4,7 @@
 
 * PowerShell Version v6.0 or higher. Updated versions can be [downloaded directly from Microsoft](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.3)
 * Microsoft Graph PowerShell Module. Run the following command to install: `Install-Module Microsoft.Graph`
-* When creating SharePoint Enterprise Applications [OpenSSL v1.1.1](https://slproweb.com/products/Win32OpenSSL.html) and Windows is also required.
+* When creating SharePoint Enterprise Applications [OpenSSL v3.4.1](https://slproweb.com/products/Win32OpenSSL.html) and Windows is also required.
 
 
 ## Rubrik Module
@@ -41,7 +41,7 @@ Note - At most, Enterprise Applications should be created in batches of 50 to av
 ```
 $InformationPreference = "Continue"
 Connect-Polaris
-NewEnterpriseApplication -DataSource Exchange -Count 50
+NewEnterpriseApplication -DataSource Exchange -Count 1
 Disconnect-Polaris
 ```
 
@@ -56,7 +56,7 @@ Disconnect-Polaris
 
 3. Create the Enterprise Application. After running the command you will be prompted to authenticate into Microsoft using Global administrator credentials
 
-`NewEnterpriseApplication -DataSource Exchange -Count 50`
+`NewEnterpriseApplication -DataSource Exchange -Count 1`
 
 Valid DataSource options are Exchange, OneDrive, or SharePoint.
 
