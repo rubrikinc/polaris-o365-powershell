@@ -115,17 +115,17 @@ function Update-EnterpriseApplicationSecret() {
 
         $privateKeySize = 2048
         $privateKeyFileName = "RubrikTempPrivateKey.pem"
-        $certFileName = "RubrikTempCert.crt"
+        $certFileName = "RubrikTempCert.pem"
         $CertSubject = "/O=Rubrik"
         $CertExpireDays = $ExpirationInYears * 365
 
         $convertedCertFileName = "RubrikTempConvertedFileCert.crt"
         $openSSLVersion = openssl version
-        $supportWindowsVersion = "OpenSSL 1.1.1"
+        $supportWindowsVersion = "OpenSSL 3.4.1"
 
         if ($IsWindows){
             if ($openSSLVersion -notmatch $supportWindowsVersion){
-                throw "The SharePoint Enterprise Application creation process requires OpenSSL v1.1.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
+                throw "The SharePoint Enterprise Application creation process requires OpenSSL v3.4.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
             }
         } 
 
@@ -209,30 +209,26 @@ function Update-EnterpriseApplicationSecret() {
 
         $appExists = $app.count -gt 0
         if ($appExists) {
-            if ($DataSource -eq "Sharepoint") {
+            if ($DataSource -eq "SharePoint") {
                 Write-Information -Message "Info: Creating an RSA private key for the SharePoint Enterprise Application."
                 if ($IsWindows){
                     # On Windows openssl genrsa does not support additional options and SHA256 is already the default.
-                    openssl genrsa -out $privateKeyFileName $privateKeySize 2>$null
+                    openssl genrsa -traditional -out $privateKeyFileName $privateKeySize 2>$null
                 } else {
-                    openssl genrsa -out $privateKeyFileName $privateKeySize -sha256 -nodes 2>$null
+                    openssl genrsa -traditional -out $privateKeyFileName $privateKeySize -sha256 -nodes 2>$null
                 }
     
                 Write-Information -Message "Info: Creating a x509 self-signed certificate using the private key."
                 openssl req -key $privateKeyFileName -new -x509 -days $CertExpireDays -out $certFileName -sha256 -subj $CertSubject -config $sslConfigFileName -extensions v3_req
     
-                Write-Information -Message "Info: Converting the certificate to the binary DER format."
-                openssl x509 -in $certFileName -outform der -out $convertedCertFileName -sha256
-    
-    
                 # Cert Raw Data Sent to M365
-                $certRawData = Get-Content "${convertedCertFileName}" -AsByteStream
+                $certRawData = Get-Content "${certFileName}" -AsByteStream
                 # Cert Raw Data in Base 64 sent to Rubrik
                 $certRawDataBase64 = [System.Convert]::ToBase64String($certRawData)
     
                 $pemRawData  = Get-Content "${privateKeyFileName}" -AsByteStream
                 # Private Key in Base 64 sent to Rubrik
-                $pemRawDataBase64 = [System.Convert]::ToBase64String($pemRawData )
+                $pemRawDataBase64 = [System.Convert]::ToBase64String($pemRawData)
     
             
     
@@ -259,8 +255,11 @@ function Update-EnterpriseApplicationSecret() {
     
     
                 Remove-Item  "$certFileName"
-                Remove-Item "${convertedCertFileName}"
                 Remove-Item "${privateKeyFileName}"
+            }
+
+            foreach ($password in $app.PasswordCredentials) {
+                Remove-MgApplicationPassword -ApplicationId $app.ID -KeyId $password.KeyId
             }
 
             $addPasswordToApp = Add-MgApplicationPassword -ApplicationId $app.Id -PasswordCredential $passwordCred  -InformationAction "SilentlyContinue"
@@ -286,8 +285,8 @@ function Update-EnterpriseApplicationSecret() {
             $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$updateAppCredentials: Boolean"
             $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, updateAppCredentials: `$updateAppCredentials}"
         } else {
-            $certRawData = $app.CertRawDataBase64
-            $pemRawData = $app.PemRawDataBase64
+            $certRawData = $certRawDataBase64
+            $pemRawData = $pemRawDataBase64
             $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!, `$updateAppCredentials: Boolean"
             $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey, updateAppCredentials: `$updateAppCredentials}"
         }
