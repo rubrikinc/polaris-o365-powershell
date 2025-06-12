@@ -3,7 +3,7 @@ function Update-EnterpriseApplicationSecret() {
     <#
     .SYNOPSIS
 
-    Updates secret of exostomg Application in Microsoft 365 and then adds to Rubrik.
+    Updates secret of existing Application in Microsoft 365 and then adds to Rubrik.
 
     .PARAMETER DataSource
     The type of Enterprise Application you wish to update. Valid values are: Exchange, SharePoint, OneDrive.
@@ -211,7 +211,7 @@ function Update-EnterpriseApplicationSecret() {
         if ($appExists) {
             if ($DataSource -eq "SharePoint") {
                 Write-Information -Message "Info: Creating an RSA private key for the SharePoint Enterprise Application."
-                if ($IsWindows){
+                if ($IsWindows -Or $IsMacOS){
                     # On Windows openssl genrsa does not support additional options and SHA256 is already the default.
                     openssl genrsa -traditional -out $privateKeyFileName $privateKeySize 2>$null
                 } else {
