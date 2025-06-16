@@ -41,7 +41,7 @@ Note - At most, Enterprise Applications should be created in batches of 50 to av
 ```
 $InformationPreference = "Continue"
 Connect-Polaris
-NewEnterpriseApplication -DataSource Exchange -Count 1
+New-EnterpriseApplication -DataSource Exchange -Count 1
 Disconnect-Polaris
 ```
 
@@ -56,7 +56,7 @@ Disconnect-Polaris
 
 3. Create the Enterprise Application. After running the command you will be prompted to authenticate into Microsoft using Global administrator credentials
 
-`NewEnterpriseApplication -DataSource Exchange -Count 1`
+`New-EnterpriseApplication -DataSource Exchange -Count 1`
 
 Valid DataSource options are Exchange, OneDrive, or SharePoint.
 

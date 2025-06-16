@@ -6,8 +6,7 @@ function New-EnterpriseApplication() {
    Create a new Enterprise Application in Microsoft 365 and then adds to Rubrik.
 
     .PARAMETER DataSource
-    The type of Enterprise Application you wish to created. Valid values are: Exchange, SharePoint, OneDrive, and FirstFull. When FirstFull is selected, the maximum number of Enterprise Applications Rubrik can load balance across for
-    every default deployment will be created. This includes SharePoint, OneDrive and Exchange.
+    The type of Enterprise Application you wish to created. Valid values are: Exchange, SharePoint and OneDrive.
 
     .PARAMETER ExpirationInYears
     The number of years in which the Enterprise Application will be valid for before expiring. The default value is 200.
@@ -79,12 +78,12 @@ function New-EnterpriseApplication() {
     $endpoint = $PolarisURL + '/api/graphql'
 
     $configuredSubscriptionsOnRubrik = Get-PolarisM365Subscriptions
-    $numberOfSubscriptionsCOnfigured = $configuredSubscriptionsOnRubrik.Count
+    $numberOfSubscriptionsConfigured = $configuredSubscriptionsOnRubrik.Count
 
     Write-Information -Message "Info: Verifing a Microsoft 365 subscription has been set up on Rubrik."
-    if ($numberOfSubscriptionsCOnfigured -eq 0){
+    if ($numberOfSubscriptionsConfigured -eq 0){
         throw "A Microsoft 365 subscription must be set up before adding additional Enterprise Applications."
-    } elseif ($numberOfSubscriptionsCOnfigured -eq 1){
+    } elseif ($numberOfSubscriptionsConfigured -eq 1){
         $subscriptionId = $configuredSubscriptionsOnRubrik.subscriptionId
     } else {
 
@@ -124,7 +123,7 @@ function New-EnterpriseApplication() {
 
     $applicationName = @{
         "Exchange"  = "Rubrik Exchange - " + $($polarisAccountName)
-        "OneDrive" = "Rubrik CA - $($polarisAccountName)"
+        "OneDrive" = "Rubrik OneDrive - $($polarisAccountName)"
         "SharePoint" = "Rubrik SharePoint - $($polarisAccountName)"
     }
 
@@ -149,40 +148,26 @@ function New-EnterpriseApplication() {
     $exchangeGraphPermissionsGuid = 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '5b567255-7703-4780-807c-7be8301ae99b', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', 'df021288-bdef-4463-88db-98f22de89214', '230c1aed-a721-4c5d-9cb4-a90514e508ef'
     #                              User.Read.All,                          full_access_as_app,                     Mail.ReadWrite,                        Contacts.ReadWrite,                      Calendars.ReadWrite.All,                 Tasks.ReadWrite
     $exchangeEwsPermissionsGuid = 'bf24470f-10c1-436d-8d53-7b997eb473be', 'dc890d15-9560-4a4c-9b7f-a736ec74ec40', 'e2a3a72e-5f79-4c64-b1b1-878b674786c9', '6918b873-d17a-4dc1-b314-35f528134491', 'ef54d2bf-783f-4e0f-bca1-3210c0444d99', '2c6a42ca-0d4d-49ad-bc0e-21222c449a65'
-    # Sites.Read.All, Sites.ReadWrite.All, User.Read.All
-    $oneDriveGraphPermissionsGuid = '332a536c-c7ef-4017-ab91-336970924f0d', '9492366f-7969-46a4-8d15-ed1a20078fff', 'df021288-bdef-4463-88db-98f22de89214'
-    # Same permissions as OneDrive + Sites.FullControl.All
-    $sharePointGraphPermissionGuid = $oneDriveGraphPermissionsGuid + 'a82116e5-55eb-4c41-a434-62fe8a61c773'
-    # Sites.FullControl.All
-    $sharePointSpointPermissionGuid = '678536fe-1083-478a-9c59-b99265e6b0d3'
+    #                               Sites.Read.All,                         Files.ReadWrite.All,                    User.Read.All,                          Sites.FullControl.All
+    $oneDriveGraphPermissionsGuid = '332a536c-c7ef-4017-ab91-336970924f0d', '75359482-378d-4052-8f01-80520e7db3cd', 'df021288-bdef-4463-88db-98f22de89214', 'a82116e5-55eb-4c41-a434-62fe8a61c773'
+    #                               Sites.FullControl.All
+    $oneDriveSpointPermissionGuid = '678536fe-1083-478a-9c59-b99265e6b0d3'
+    # Same permissions as OneDrive
+    $sharePointGraphPermissionGuid = $oneDriveGraphPermissionsGuid
+    # Same permissions as OneDrive
+    $sharePointSpointPermissionGuid = $oneDriveSpointPermissionGuid
 
     $enterpriceApplicationDetails = New-Object System.Collections.ArrayList
     $servicePrincipalAppRoleAssignedRetry = New-Object System.Collections.ArrayList
 
-    if ($DataSource -eq "FirstFull"){
-
-        $toCreateDetails = @{
-            "Exchange" = 154
-            "OneDrive" = 16
-            "SharePoint" = 24
-        }
-
-
-
-        Write-Information -Message "Info: Will create $($toCreateDetails.Exchange) Exchange, $($toCreateDetails.OneDrive) OneDrive, and $($toCreateDetails.SharePoint) SharePoint Enterprise Applications."
-
-    } else {
-        $toCreateDetails = @{
-            $DataSource =  $Count
-        }
-
-        Write-Information -Message "Info: Will create $Count $DataSource Enterprise Application(s)."
-
-
+    $toCreateDetails = @{
+        $DataSource =  $Count
     }
 
+    Write-Information -Message "Info: Will create $Count $DataSource Enterprise Application(s)."
+
     # SharePoint Self-Signed Certificate Creation Variables
-    if ($DataSource -eq "SharePoint" -Or $DataSource -eq "FirstFull"){
+    if ($DataSource -eq "SharePoint" -Or $DataSource -eq "OneDrive"){
         $sslConfigFileName = "RubrikSSLConfigTemp.txt"
         $sslConfig = "[req]
         req_extensions = v3_req
@@ -206,12 +191,12 @@ function New-EnterpriseApplication() {
 
         if ($IsWindows){
             if ($openSSLVersion -notmatch $supportWindowsVersion){
-                throw "The SharePoint Enterprise Application creation process requires OpenSSL v3.4.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
+                throw "The $($DataSource) Enterprise Application creation process requires OpenSSL v3.4.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
             }
         }
 
         if ($PSVersionTable.PSVersion.Major -lt 6){
-            throw "The SharePoint Enterprise Application creation process requires PowerShell 6.0 or higher. Please upgrade and try again."
+            throw "The $($DataSource) Enterprise Application creation process requires PowerShell 6.0 or higher. Please upgrade and try again."
         }
 
 
@@ -287,131 +272,78 @@ function New-EnterpriseApplication() {
 
             Write-Information -Message "Info: Getting the Service Principal ID from Microsoft."
             $graphApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($grapApiAppId)'" -InformationAction "SilentlyContinue"
+
+            function AddApiPermissionsToEnterpriseApplication() {
+                <#
+                .SYNOPSIS
+
+                Add API permissions to an existing Enterprise Application in Microsoft 365.
+
+                .PARAMETER PermissionGuids
+                The type of Enterprise Application you wish to created. Valid values are: Exchange, SharePoint and OneDrive.
+
+                .PARAMETER ApiServicePrincipalId
+                The AppId of the API you wish to add permissions to.
+
+                #>
+                param(
+                    [Parameter(Mandatory = $True)]
+                    [String[]]$PermissionGuids,
+                    [Parameter(Mandatory = $True)]
+                    [String]$ApiServicePrincipalId
+                )
+
+                foreach ( $iD in $PermissionGuids  ) {
+                    try {
+                        New-MgServicePrincipalAppRoleAssignedTo `
+                        -ServicePrincipalId $newServicePrincipal.Id `
+                        -ResourceId $ApiServicePrincipalId `
+                        -PrincipalId $newServicePrincipal.Id `
+                        -AppRoleId $iD -InformationAction "SilentlyContinue" | Out-Null
+                    }
+                    catch {
+                        $tempSpDetails = New-Object System.Object
+                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
+                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $ApiServicePrincipalId
+                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
+                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
+                        $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
+                    }
+                }
+            }
+
             if ($DataSource -eq "Exchange") {
 
                 $ewsApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($ewsApiAppId)'" -InformationAction "SilentlyContinue"
 
-                foreach ( $iD in $exchangeGraphPermissionsGuid  ) {
-                    try {
-                        New-MgServicePrincipalAppRoleAssignedTo `
-                        -ServicePrincipalId $newServicePrincipal.Id `
-                        -ResourceId $graphApiServicePrincipal.Id `
-                        -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
+                AddApiPermissionsToEnterpriseApplication -PermissionGuids $exchangeGraphPermissionsGuid -ApiServicePrincipalId $graphApiServicePrincipal.Id
 
-                    }
-                    catch {
-                        $tempSpDetails = New-Object System.Object
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $graphApiServicePrincipal.Id
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
-                        $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-                    }
-
-                }
-
-
-
-                foreach ( $iD in $exchangeEwsPermissionsGuid  ) {
-                    try {
-
-                        New-MgServicePrincipalAppRoleAssignedTo `
-                        -ServicePrincipalId $newServicePrincipal.Id `
-                        -ResourceId $ewsApiServicePrincipal.Id `
-                        -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
-
-                    }
-                    catch {
-                        $tempSpDetails = New-Object System.Object
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $ewsApiServicePrincipal.Id
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
-                        $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
-                        $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-
-                    }
-
-                }
-
+                AddApiPermissionsToEnterpriseApplication -PermissionGuids $exchangeEwsPermissionsGuid -ApiServicePrincipalId $ewsApiServicePrincipal.Id
 
             }
             elseif ($DataSource -eq "OneDrive") {
                 Write-Information -Message "Info: Adding the required API Permissions to the Enterprise Application."
 
-                try {
-                    foreach ( $iD in $oneDriveGraphPermissionsGuid  ) {
-                        New-MgServicePrincipalAppRoleAssignedTo `
-                        -ServicePrincipalId $newServicePrincipal.Id `
-                        -ResourceId $graphApiServicePrincipal.Id `
-                        -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -ErrorAction Stop -InformationAction "SilentlyContinue"| Out-Null
+                $sharePointApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($sharePointApiAppId)'" -InformationAction "SilentlyContinue"
 
-                    }
+                AddApiPermissionsToEnterpriseApplication -PermissionGuids $oneDriveGraphPermissionsGuid -ApiServicePrincipalId $graphApiServicePrincipal.Id
 
-                }
-                catch {
-                    $tempSpDetails = New-Object System.Object
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $graphApiServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
-                    $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-
-                }
-
+                AddApiPermissionsToEnterpriseApplication -PermissionGuids $oneDriveSpointPermissionGuid -ApiServicePrincipalId $sharePointApiServicePrincipal.Id
             }
             elseif ($DataSource -eq "SharePoint") {
 
                 $sharePointApiServicePrincipal = Get-MgServicePrincipal -Filter "AppId eq '$($sharePointApiAppId)'" -InformationAction "SilentlyContinue"
 
-                try {
-                    foreach ( $iD in $sharePointGraphPermissionGuid  ) {
-                        New-MgServicePrincipalAppRoleAssignedTo `
-                        -ServicePrincipalId $newServicePrincipal.Id `
-                        -ResourceId $graphApiServicePrincipal.Id `
-                        -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -InformationAction "SilentlyContinue" | Out-Null
+                AddApiPermissionsToEnterpriseApplication -PermissionGuids $sharePointGraphPermissionGuid -ApiServicePrincipalId $graphApiServicePrincipal.Id
 
-                    }
+                AddApiPermissionsToEnterpriseApplication -PermissionGuids $sharePointSpointPermissionGuid -ApiServicePrincipalId $sharePointApiServicePrincipal.Id
 
-                }
-                catch {
-                    $tempSpDetails = New-Object System.Object
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $graphApiServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
-                    $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
+            }
 
-                }
-
-                try {
-                    foreach ( $iD in $sharePointSpointPermissionGuid  ) {
-                        New-MgServicePrincipalAppRoleAssignedTo `
-                        -ServicePrincipalId $newServicePrincipal.Id `
-                        -ResourceId $sharePointApiServicePrincipal.Id `
-                        -PrincipalId $newServicePrincipal.Id `
-                        -AppRoleId $iD -InformationAction "SilentlyContinue" | Out-Null
-
-                    }
-
-                }
-                catch {
-                    $tempSpDetails = New-Object System.Object
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ServicePrincipalId" -Value $newServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "ResourceId" -Value $sharePointApiServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "PrincipalId" -Value $newServicePrincipal.Id
-                    $tempSpDetails | Add-Member -MemberType NoteProperty -Name "AppRoleId" -Value $iD
-                    $servicePrincipalAppRoleAssignedRetry.Add($tempSpDetails) | Out-Null
-
-                }
-
-
-                Write-Information -Message "Info: Creating an RSA private key for the SharePoint Enterprise Application."
-                if ($IsWindows){
-                    # On Windows openssl genrsa does not support additional options and SHA256 is already the default.
+            if ($DataSource -eq "SharePoint" -Or $DataSource -eq "OneDrive"){
+                Write-Information -Message "Info: Creating an RSA private key for the $($DataSource) Enterprise Application."
+                if ($IsWindows -Or $IsMacOS){
+                    # On Windows/MacOS openssl genrsa does not support additional options and SHA256 is already the default.
                     openssl genrsa -traditional -out $privateKeyFileName $privateKeySize 2>$null
                 } else {
                     openssl genrsa -traditional -out $privateKeyFileName $privateKeySize -sha256 -nodes 2>$null
@@ -427,9 +359,7 @@ function New-EnterpriseApplication() {
 
                 $pemRawData  = Get-Content "${privateKeyFileName}" -AsByteStream
                 # Private Key in Base 64 sent to Rubrik
-                $pemRawDataBase64 = [System.Convert]::ToBase64String($pemRawData )
-
-
+                $pemRawDataBase64 = [System.Convert]::ToBase64String($pemRawData)
 
                 $keyCredential = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphKeyCredential
                 $keyCredential.Type = "AsymmetricX509Cert";
@@ -452,13 +382,9 @@ function New-EnterpriseApplication() {
                     Write-Host "Error adding the certification to $($newEnterpriseApp.Id) to Rubrik. The error resposne is $($errorMessage)."
                 }
 
-
                 Remove-Item  "$certFileName"
                 Remove-Item "${privateKeyFileName}"
-
-                
             }
-            
 
             Write-Information -Message "Info: Storing the completed Enterprise Application details to memory."
             $tempEntAppDetails = New-Object System.Object
@@ -469,11 +395,9 @@ function New-EnterpriseApplication() {
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "PemRawDataBase64" -Value $pemRawDataBase64
 
             $enterpriceApplicationDetails.Add($tempEntAppDetails) | Out-Null
+        }
 
     }
-    
-       
-}
     if ($servicePrincipalAppRoleAssignedRetry.Count -gt 0) {
         foreach ( $retry in $servicePrincipalAppRoleAssignedRetry  ) {
             New-MgServicePrincipalAppRoleAssignedTo `
@@ -494,7 +418,7 @@ function New-EnterpriseApplication() {
     Start-Sleep -Seconds $staticSleepPeriod
     foreach ( $app in $enterpriceApplicationDetails  ) {
 
-        if ($app.DataSource -ne "SharePoint"){
+        if ($app.DataSource -eq "Exchange"){
             $certRawData = ""
             $pemRawData = ""
             $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!"
@@ -504,8 +428,6 @@ function New-EnterpriseApplication() {
             $pemRawData = $app.PemRawDataBase64
             $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!"
             $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey}"
-
-
         }
 
         $payload = @{
@@ -517,8 +439,6 @@ function New-EnterpriseApplication() {
                 "o365SubscriptionId" = $subscriptionId;
                 "o365Base64AppCertificate" =  $certRawData;
                 "o365Base64AppPrivateKey" =  $pemRawData;
-
-
             };
             "query" = "mutation AddCustomerO365AppMutation($gqlQueryArgumentType) {
                 insertCustomerO365App($gqlInput) {
