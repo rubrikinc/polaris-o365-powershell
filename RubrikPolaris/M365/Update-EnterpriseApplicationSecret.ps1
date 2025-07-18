@@ -100,8 +100,9 @@ function Update-EnterpriseApplicationSecret() {
         }
     }
 
-    # SharePoint Self-Signed Certificate Creation Variables
-    if ($DataSource -eq "SharePoint"){
+    # Self-Signed Certificate Creation Variables
+    $needsCert = ($DataSource -eq "SharePoint" -Or $DataSource -eq "OneDrive")
+    if ($needsCert){
         $sslConfigFileName = "RubrikSSLConfigTemp.txt"
         $sslConfig = "[req]
         req_extensions = v3_req
@@ -125,12 +126,12 @@ function Update-EnterpriseApplicationSecret() {
 
         if ($IsWindows){
             if ($openSSLVersion -notmatch $supportWindowsVersion){
-                throw "The SharePoint Enterprise Application creation process requires OpenSSL v3.4.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
+                throw "The Enterprise Application update process requires OpenSSL v3.4.1 Please download the non-light installer (https://slproweb.com/products/Win32OpenSSL.html) and try again."
             }
         } 
 
         if ($PSVersionTable.PSVersion.Major -lt 6){
-            throw "The SharePoint Enterprise Application creation process requires PowerShell 6.0 or higher. Please upgrade and try again."
+            throw "The Enterprise Application update process requires PowerShell 6.0 or higher. Please upgrade and try again."
         }
 
 
@@ -141,10 +142,10 @@ function Update-EnterpriseApplicationSecret() {
     Connect-Graph -Scopes "Application.ReadWrite.All","AppRoleAssignment.ReadWrite.All","User.Read" -ErrorAction Stop | Out-Null
     Write-Information -Message "Info: Successfully authenticated the Microsoft Graph API."
 
-
+    $secretExpiryDate = Get-Date (Get-Date).ToUniversalTime().AddYears($ExpirationInYears) -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
     $passwordcred = @{
         "displayName" = "New-Secret"
-        "endDateTime" = Get-Date (Get-Date).ToUniversalTime().AddYears($ExpirationInYears) -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
+        "endDateTime" = $secretExpiryDate
     }
 
     $o365AppType = @{
@@ -189,7 +190,7 @@ function Update-EnterpriseApplicationSecret() {
     }
 
 
-    $enterpriceApplicationDetails = New-Object System.Collections.ArrayList
+    $enterpriseApplicationDetails = New-Object System.Collections.ArrayList
     # Process each app ID
     foreach ($appId in $appIds) {
         Write-Host -ForegroundColor Cyan "Updating Secret $appId..." -NoNewline
@@ -209,8 +210,8 @@ function Update-EnterpriseApplicationSecret() {
 
         $appExists = $app.count -gt 0
         if ($appExists) {
-            if ($DataSource -eq "SharePoint") {
-                Write-Information -Message "Info: Creating an RSA private key for the SharePoint Enterprise Application."
+            if ($needsCert) {
+                Write-Information -Message "Info: Creating an RSA private key for the Enterprise Application."
                 if ($IsWindows -Or $IsMacOS){
                     # On Windows openssl genrsa does not support additional options and SHA256 is already the default.
                     openssl genrsa -traditional -out $privateKeyFileName $privateKeySize 2>$null
@@ -274,21 +275,21 @@ function Update-EnterpriseApplicationSecret() {
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "CertRawDataBase64" -Value $certRawDataBase64
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "PemRawDataBase64" -Value $pemRawDataBase64
 
-            $enterpriceApplicationDetails.Add($tempEntAppDetails) | Out-Null
+            $enterpriseApplicationDetails.Add($tempEntAppDetails) | Out-Null
         } else {
             Write-Host -ForegroundColor Red "Application $appId do not exist in Azure"
         }
 
-        if ($DataSource -ne "SharePoint"){
-            $certRawData = ""
-            $pemRawData = ""
-            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$updateAppCredentials: Boolean"
-            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, updateAppCredentials: `$updateAppCredentials}"
-        } else {
+        if ($needsCert){
             $certRawData = $certRawDataBase64
             $pemRawData = $pemRawDataBase64
-            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!, `$updateAppCredentials: Boolean"
-            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey, updateAppCredentials: `$updateAppCredentials}"
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!, `$appSecretExpiry: DateTime, `$updateAppCredentials: Boolean"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey, appSecretExpiry: `$appSecretExpiry, updateAppCredentials: `$updateAppCredentials}"
+        } else {
+            $certRawData = ""
+            $pemRawData = ""
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$appSecretExpiry: DateTime, `$updateAppCredentials: Boolean"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, appSecretExpiry: `$appSecretExpiry, updateAppCredentials: `$updateAppCredentials}"
         }
 
         $payload = @{
@@ -300,9 +301,8 @@ function Update-EnterpriseApplicationSecret() {
                 "o365SubscriptionId" = $subscriptionId;
                 "o365Base64AppCertificate" =  $certRawData;
                 "o365Base64AppPrivateKey" =  $pemRawData;
+                "appSecretExpiry" = $secretExpiryDate;
                 "updateAppCredentials" = $true;
-
-
             };
             "query" = "mutation AddCustomerO365AppMutation($gqlQueryArgumentType) {
                 insertCustomerO365App($gqlInput) {
@@ -324,9 +324,8 @@ function Update-EnterpriseApplicationSecret() {
     }
     if ($null -ne $sslConfigFileName){
         Remove-Item "$sslConfigFileName"
-
     } 
-    return $enterpriceApplicationDetails
+    return $enterpriseApplicationDetails
 }
 
 Export-ModuleMember -Function Update-EnterpriseApplicationSecret
