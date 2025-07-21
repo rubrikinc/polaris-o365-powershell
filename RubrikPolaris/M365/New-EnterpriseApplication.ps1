@@ -127,10 +127,10 @@ function New-EnterpriseApplication() {
         "SharePoint" = "Rubrik SharePoint - $($polarisAccountName)"
     }
 
-
+    $secretExpiryDate = Get-Date (Get-Date).ToUniversalTime().AddYears($ExpirationInYears) -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
     $passwordcred = @{
         "displayName" = $applicationName[$DataSource]
-        "endDateTime" = Get-Date (Get-Date).ToUniversalTime().AddYears($ExpirationInYears) -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
+        "endDateTime" = $secretExpiryDate
     }
 
     # API Service Principal IDs
@@ -157,7 +157,7 @@ function New-EnterpriseApplication() {
     # Same permissions as OneDrive
     $sharePointSpointPermissionGuid = $oneDriveSpointPermissionGuid
 
-    $enterpriceApplicationDetails = New-Object System.Collections.ArrayList
+    $enterpriseApplicationDetails = New-Object System.Collections.ArrayList
     $servicePrincipalAppRoleAssignedRetry = New-Object System.Collections.ArrayList
 
     $toCreateDetails = @{
@@ -166,8 +166,9 @@ function New-EnterpriseApplication() {
 
     Write-Information -Message "Info: Will create $Count $DataSource Enterprise Application(s)."
 
-    # SharePoint Self-Signed Certificate Creation Variables
-    if ($DataSource -eq "SharePoint" -Or $DataSource -eq "OneDrive"){
+    $needsCert = ($DataSource -eq "SharePoint" -Or $DataSource -eq "OneDrive")
+    # Self-Signed Certificate Creation Variables
+    if ($needsCert){
         $sslConfigFileName = "RubrikSSLConfigTemp.txt"
         $sslConfig = "[req]
         req_extensions = v3_req
@@ -340,7 +341,7 @@ function New-EnterpriseApplication() {
 
             }
 
-            if ($DataSource -eq "SharePoint" -Or $DataSource -eq "OneDrive"){
+            if ($needsCert){
                 Write-Information -Message "Info: Creating an RSA private key for the $($DataSource) Enterprise Application."
                 if ($IsWindows -Or $IsMacOS){
                     # On Windows/MacOS openssl genrsa does not support additional options and SHA256 is already the default.
@@ -394,7 +395,7 @@ function New-EnterpriseApplication() {
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "CertRawDataBase64" -Value $certRawDataBase64
             $tempEntAppDetails | Add-Member -MemberType NoteProperty -Name "PemRawDataBase64" -Value $pemRawDataBase64
 
-            $enterpriceApplicationDetails.Add($tempEntAppDetails) | Out-Null
+            $enterpriseApplicationDetails.Add($tempEntAppDetails) | Out-Null
         }
 
     }
@@ -416,20 +417,19 @@ function New-EnterpriseApplication() {
 
     Write-Information -Message "Info: Waiting $($staticSleepPeriod) seconds to allow the Microsoft database to sync."
     Start-Sleep -Seconds $staticSleepPeriod
-    foreach ( $app in $enterpriceApplicationDetails  ) {
+    foreach ( $app in $enterpriseApplicationDetails  ) {
 
-        if ($app.DataSource -eq "Exchange"){
-            $certRawData = ""
-            $pemRawData = ""
-            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!"
-            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId}"
-        } else {
+        if ($needsCert) {
             $certRawData = $app.CertRawDataBase64
             $pemRawData = $app.PemRawDataBase64
-            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!"
-            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey}"
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$o365Base64AppCertificate: String!, `$o365Base64AppPrivateKey: String!, `$appSecretExpiry: DateTime"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, base64AppCertificate: `$o365Base64AppCertificate, base64AppPrivateKey: `$o365Base64AppPrivateKey, appSecretExpiry: `$appSecretExpiry}"
+        } else {
+            $certRawData = ""
+            $pemRawData = ""
+            $gqlQueryArgumentType = "`$o365AppType: String!, `$o365AppClientId: String!, `$o365AppClientSecret: String!, `$o365SubscriptionId: String!, `$appSecretExpiry: DateTime"
+            $gqlInput = "input: {appType: `$o365AppType, appClientId: `$o365AppClientId, appClientSecret: `$o365AppClientSecret, subscriptionId: `$o365SubscriptionId, appSecretExpiry: `$appSecretExpiry}"
         }
-
         $payload = @{
             "operationName" = "AddCustomerO365AppMutation";
             "variables" = @{
@@ -439,6 +439,7 @@ function New-EnterpriseApplication() {
                 "o365SubscriptionId" = $subscriptionId;
                 "o365Base64AppCertificate" =  $certRawData;
                 "o365Base64AppPrivateKey" =  $pemRawData;
+                "appSecretExpiry" = $secretExpiryDate;
             };
             "query" = "mutation AddCustomerO365AppMutation($gqlQueryArgumentType) {
                 insertCustomerO365App($gqlInput) {
@@ -465,7 +466,7 @@ function New-EnterpriseApplication() {
         Remove-Item "$sslConfigFileName"
 
     } 
-    return $enterpriceApplicationDetails
+    return $enterpriseApplicationDetails
     
 }
 Export-ModuleMember -Function New-EnterpriseApplication
