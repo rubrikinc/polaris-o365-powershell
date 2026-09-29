@@ -213,8 +213,9 @@ function Get-PolarisM365SharePoint() {
     }
 
     foreach ($node in $node_array) {
-        $row = '' | Select-Object name,id,type,slaAssignment,effectiveSlaDomainName
+        $row = '' | Select-Object name,url,id,type,slaAssignment,effectiveSlaDomainName
         $row.name = $node.name
+        $row.url = $node.url
         $row.id = $node.id
         $row.type = $node.objectType
         $row.slaAssignment = $node.slaAssignment
